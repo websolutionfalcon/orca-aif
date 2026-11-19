@@ -13,7 +13,9 @@ workflow [AI Factory](https://github.com/lee-to/ai-factory) (`/aif-*` skills) в
 ## Основные возможности
 
 - **Status bar:** компактный индикатор AI Factory для текущего workspace — активный план и
-  прогресс задач (например, `AIF 3/8`), признак отсутствия настройки; клик открывает панель.
+  прогресс задач (например, `AIF 3/8`); скрыт, если AI Factory не настроен. Клик показывает
+  сводку статуса (команда `aif.summary`): в host API Orca нет метода открыть панель плагина,
+  поэтому боковая панель переключается отдельной командой `aif.toggleSidebar`.
 - **Боковая панель (HTML):**
   - статус проекта: наличие `DESCRIPTION.md`, `ARCHITECTURE.md`, `ROADMAP.md`, `rules/`, `config.yaml`;
   - активный план (fast `PLAN.md`, full-план ветки в `plans/`, ultra-бандл, `FIX_PLAN.md`) со
@@ -42,8 +44,11 @@ workflow [AI Factory](https://github.com/lee-to/ai-factory) (`/aif-*` skills) в
   пользователя); собственной БД нет
 - **Тесты:** `orca plugin test` (kit из `orca/testing`: `mountWorker`, `mockHost`)
 - **Инструменты разработки:** `orca plugin create/types/dev watch/check/validate/inspect/shot`
-- **Зависимости:** без runtime npm-зависимостей; при необходимости — бандлинг, `node_modules/`
-  не коммитится
+- **Зависимости:** нет ни runtime-, ни dev-зависимостей. Orca загружает всю папку плагина и
+  отказывает при symlink'ах и превышении 2000 файлов, поэтому `node_modules/` в корне быть не
+  должно. Проверка типов: `npm run typecheck` (`npx -p typescript@5.9.3 tsc -p .`, TypeScript из
+  кэша npx), нужные API Node описаны в `src/types/node.d.ts`.
+- **Локализация:** тексты worker и панели на английском и русском (по `orca.locale` / языку системы)
 
 ## Интеграции
 

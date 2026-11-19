@@ -15,41 +15,50 @@
 
 ## Структура проекта
 
-Код плагина ещё не создан (стартовый шаблон: `orca plugin create . --template worker-panel`, панель переводится на HTML). Сейчас в репозитории только контекст AI Factory:
-
 ```
 orca-aif/
-├── .ai-factory/                 # Контекст AI Factory
-│   ├── config.yaml              # Настройки AI Factory (язык ru, git-ветки)
-│   ├── DESCRIPTION.md           # Спецификация проекта
-│   ├── ARCHITECTURE.md          # Архитектура (Layered) и правила зависимостей
-│   └── rules/base.md            # Базовые правила кода
-├── .ai-factory.json             # Состояние установки AI Factory (managed)
-├── .claude/
-│   ├── skills/                  # aif-* skills + orca-plugin-authoring
-│   └── agents/                  # Субагенты AI Factory
+├── orca-plugin.json             # Манифест плагина (команды, панель, status bar, настройки, capabilities)
+├── package.json                 # Только dev-скрипты: typecheck/test/check/validate; зависимостей нет
+├── tsconfig.json                # extends ./.orca/types/tsconfig.json
+├── LICENSE                      # MIT
+├── assets/icon.png              # Иконка плагина 256×256
+├── panel/                       # HTML-панель: index.html + panel.css (переменные --orca-*)
+├── src/
+│   ├── worker.ts                # Точка входа worker: связывание сервисов, команды, события, запросы панели
+│   ├── protocol.ts              # Контракт worker ↔ панель
+│   ├── core/                    # Чистая логика: config, plans (поиск плана), roadmap, status, commands, i18n
+│   ├── worker/                  # Адаптеры и сервисы: orcaHost, workspaceFs, watcher, statusService, commandService, settings, log
+│   ├── ui/                      # Скрипты панели: main, state, view, dom (мини-VDOM), i18n
+│   └── types/node.d.ts          # Локальные типы API Node (без node_modules в папке плагина)
+├── test/fixtures/               # Фикстуры планов и roadmap для тестов core
+├── .ai-factory/                 # Контекст AI Factory (DESCRIPTION, ARCHITECTURE, ROADMAP, plans/, references/, rules/)
+├── .claude/                     # aif-* skills, orca-plugin-authoring, субагенты
 ├── .mcp.json                    # MCP-серверы (chromeDevtools, playwright)
-└── AGENTS.md                    # Этот файл
+└── .orca/                       # Генерируется `orca plugin types` и `shot` — не редактировать, в .gitignore
 ```
-
-Целевая структура плагина — в `.ai-factory/ARCHITECTURE.md`.
 
 ## Ключевые точки входа
 
 | Файл | Назначение |
 |------|------------|
-| `orca-plugin.json` (план) | Манифест плагина: команды, панель, status bar, настройки, capabilities |
-| `src/worker.ts` (план) | Точка входа worker: `export default function activate(orca)` |
-| `src/protocol.ts` (план) | Типизированный контракт worker ↔ панель |
-| `panel/index.html` (план) | Точка входа HTML-панели |
+| `orca-plugin.json` | Манифест плагина: команды, панель, status bar, настройки, capabilities |
+| `src/worker.ts` | Точка входа worker: `export default function activate(orca)` |
+| `src/protocol.ts` | Типизированный контракт worker ↔ панель |
+| `panel/index.html` | Точка входа HTML-панели (загружает `src/ui/main.ts`) |
+| `src/core/plans.ts` | Поиск активного плана (как `/aif-implement`) и разбор планов |
 | `.ai-factory/config.yaml` | Настройки AI Factory для этого репозитория |
 
 ## Документация
 
 | Документ | Путь | Описание |
 |----------|------|----------|
-| README | README.md | Пока отсутствует; будет создан через `/aif-docs` |
-| Гайд по плагинам Orca | `.claude/skills/orca-plugin-authoring/SKILL.md` | Официальный гайд; справочники: `orca skills get orca-plugin-authoring --reference references/<file>.md` |
+| README | README.md | Лендинг плагина: установка, возможности |
+| Начало работы | `docs/getting-started.md` | Требования, установка, первый запуск |
+| Использование | `docs/usage.md` | Status bar, панель, команды, отправка агенту |
+| Настройки | `docs/configuration.md` | Настройки плагина и пути config.yaml |
+| Доступ и безопасность | `docs/permissions.md` | Разрешения и защитные меры |
+| Разработка | `docs/development.md` | Архитектура, тесты, dev-цикл, публикация |
+| Гайд по плагинам Orca | `.claude/skills/orca-plugin-authoring/SKILL.md` | Официальный гайд; справочники через `orca skills get` |
 
 ## Файлы AI-контекста
 
@@ -69,3 +78,4 @@ orca-aif/
 - Для любых изменений плагина используйте skill `orca-plugin-authoring`; команды `orca plugin ...` вызывайте с `--json`.
 - Никогда не передавайте `--approve` без явного согласия пользователя на конкретный плагин и список доступа.
 - Не редактируйте и не коммитьте `.orca/` (генерируемые типы и скриншоты).
+- Не устанавливайте npm-пакеты в корень: `node_modules/` ломает загрузку плагина в Orca. Проверка типов — `npm run typecheck`, тесты — `npm test`.

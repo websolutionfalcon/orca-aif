@@ -26,8 +26,10 @@ sandboxed-панель без доступа к файлам, Node-worker с hos
 orca-aif/
 ├── orca-plugin.json             # Манифест: commands, keybindings, panels, statusBarItems, settings, capabilities
 ├── tsconfig.json                # extends ./.orca/types/tsconfig.json
+├── package.json                 # только скрипты (typecheck/test/check/validate), без зависимостей
+├── LICENSE                      # MIT
 ├── README.md
-├── assets/                      # icon.png, cover.png, скриншоты для каталога
+├── assets/                      # icon.png (256×256), позже cover и скриншоты для каталога
 ├── panel/                       # ── UI: HTML-панель (sandboxed frame) ──
 │   ├── index.html               # Точка входа панели (contributes.panels[].entry)
 │   └── panel.css                # Стили на переменных --orca-*
@@ -40,22 +42,31 @@ orca-aif/
 │   │   ├── plans.ts             # Разбор PLAN.md / plans/<branch>.md / ultra index.md / FIX_PLAN.md
 │   │   ├── roadmap.ts           # Разбор ROADMAP.md → milestones и прогресс
 │   │   ├── status.ts            # Сборка AifStatus и текста/tone для status bar
-│   │   └── commands.ts          # Каталог команд /aif-*, сборка текста команды из аргументов
+│   │   ├── commands.ts          # Каталог команд /aif-*, сборка текста команды из аргументов
+│   │   └── i18n.ts              # Тексты worker (tooltip, aif.summary): en/ru
 │   ├── worker/                  # ── SERVICES + ADAPTERS (Node, host API) ──
 │   │   ├── statusService.ts     # Читает workspace → AifStatus, кэш, обновление status bar, posts в панель
 │   │   ├── commandService.ts    # Выбор терминала агента / запуск агента, отправка команды
 │   │   ├── watcher.ts           # Опрос mtime файлов .ai-factory/ с debounce
 │   │   ├── workspaceFs.ts       # Адаптер файловой системы: чтение артефактов по путям из config
-│   │   └── orcaHost.ts          # Тонкие обёртки над orca.host.call (has-проверки, ошибки)
+│   │   ├── orcaHost.ts          # Тонкие обёртки над orca.host.call (has-проверки, ошибки)
+│   │   ├── settings.ts          # Разбор настроек плагина с дефолтами
+│   │   └── log.ts               # Уровневый логгер поверх orca.log
+│   ├── types/node.d.ts          # Локальные типы используемых API Node (без node_modules)
 │   └── ui/                      # ── UI: скрипты панели (импортируются из panel/index.html) ──
 │       ├── main.ts              # Подписки orca.plugin.on, запросы orca.plugin.request
 │       ├── state.ts             # Состояние панели (чистые редьюсеры)
-│       └── view.ts              # Рендер DOM из состояния
+│       ├── view.ts              # Виртуальное дерево панели из состояния (чистая функция)
+│       ├── dom.ts               # Мини-VDOM: h(), render() через textContent/CSSOM, хелперы для тестов
+│       └── i18n.ts              # Тексты панели: en/ru
 ├── test/fixtures/               # Примеры .ai-factory/ для тестов core
 └── .orca/                       # Генерируется `orca plugin types` — не редактировать и не коммитить
 ```
 
-Тесты лежат рядом с кодом: `src/core/plans.test.ts`, `src/worker.test.ts`, `src/ui/state.test.ts`.
+Тесты лежат рядом с кодом: `src/core/plans.test.ts`, `src/worker.test.ts`, `src/ui/view.test.ts`,
+сквозные граничные случаи — `src/worker/edgeCases.test.ts`. HTML-панель не рендерится ни
+`mount`, ни `orca plugin check` (они только для components-панелей), поэтому view тестируется как
+виртуальное дерево из `src/ui/dom.ts`.
 
 ## Правила зависимостей
 
@@ -81,10 +92,11 @@ src/protocol.ts ← используется worker и ui (только типы
 ## Взаимодействие слоёв
 
 - **Панель ↔ worker:** только через `src/protocol.ts`.
-  Запросы: `orca.plugin.request('status.get' | 'command.run' | 'file.open', input)`; ответ всегда
+  Запросы: `orca.plugin.request('status.get' | 'status.refresh' | 'command.run' | 'file.open' | 'agents.get', input)`;
+  `file.open` открывает только пути, которые перечислены в текущем статусе; ответ всегда
   `{ ok: true, ... } | { ok: false, error }`. Push-обновления: `orca.panels.post('status.changed', status)`.
 - **Status bar:** обновляет только `statusService` через `orcaHost.updateStatusBar()` →
-  `statusBar.update`; клик по item запускает команду плагина `aif.openPanel`.
+  `statusBar.update`; клик по item запускает `aif.summary` (сводка строкой).
 - **Палитра и клавиши:** `orca.commands.register('aif.<action>')` в `worker.ts` делегирует в
   `commandService`; те же действия доступны кнопками панели через `command.run`.
 - **События Orca:** `workspace.changed` и `agent.status.changed` (`contributes.events`) →
@@ -188,4 +200,6 @@ declare module 'orca' {
 - ❌ Постоянный тяжёлый опрос: полное чтение всех артефактов по таймеру вместо проверки mtime
 - ❌ Хранение важного состояния в переменных модуля worker: сохранение файла перезапускает worker
 - ❌ `console.log` вместо `orca.log`; исключения, долетающие до панели
+- ❌ Повторяющееся предупреждение в каждом опросе/событии: только `warnOnce`, опрос (`fingerprintWorkspace`) логов не пишет
+- ❌ `node_modules/` или symlink'и внутри папки плагина: Orca загружает папку целиком
 - ❌ Добавление capability «на всякий случай»: каждая расширяет экран согласия пользователя
