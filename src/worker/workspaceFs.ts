@@ -14,6 +14,20 @@ export const MAX_FILE_BYTES = 1024 * 1024
 export const INSTALL_JSON = '.ai-factory.json'
 export const AIF_DIR = '.ai-factory'
 
+/** Warnings already logged; a refresh or poll repeats the same problem many times. */
+const loggedWarnings = new Set<string>()
+const MAX_LOGGED_WARNINGS = 500
+
+/** Logs a warning the first time it is seen (per worker run); returns whether it was logged. */
+export function warnOnce(log: Logger, scope: string, message: string, data: Record<string, unknown>): boolean {
+  const key = `${scope}|${message}|${JSON.stringify(data)}`
+  if (loggedWarnings.has(key)) return false
+  if (loggedWarnings.size >= MAX_LOGGED_WARNINGS) loggedWarnings.clear()
+  loggedWarnings.add(key)
+  log.warn(scope, message, data)
+  return true
+}
+
 export interface ResolvedWorkspace {
   ref: WorkspaceRef
   matchedBy: 'id' | 'name' | 'none'
@@ -57,14 +71,16 @@ export class WorkspaceReader {
   readonly warnings: string[] = []
   private realRoot: string | null = null
 
+  /** `quiet` collects warnings without logging them (change polling). */
   constructor(
     readonly root: string,
-    private readonly log: Logger
+    private readonly log: Logger,
+    private readonly quiet = false
   ) {}
 
   private warn(message: string, data: Record<string, unknown>): void {
     this.warnings.push(message)
-    this.log.warn('fs', message, data)
+    if (!this.quiet) warnOnce(this.log, 'fs', message, { ...data, root: this.root })
   }
 
   /** Absolute path for a workspace-relative path, or null when it leaves the root. */
@@ -171,7 +187,7 @@ export async function readWorkspace(ref: WorkspaceRef & { path: string }, log: L
   const installed = (await reader.exists(AIF_DIR)) || (await reader.exists(INSTALL_JSON))
   const configText = await reader.readText(CONFIG_PATH)
   const config = resolveConfig(configText)
-  for (const warning of config.warnings) log.warn('config', warning, { workspace: ref.id })
+  for (const warning of config.warnings) warnOnce(log, 'config', warning, { root: ref.path })
 
   const artifacts: ArtifactEntry[] = []
   for (const artifact of ARTIFACTS) {
@@ -212,7 +228,7 @@ export async function readWorkspace(ref: WorkspaceRef & { path: string }, log: L
  * fast/fix plans, the plans directory and each of its entries (and each bundle's index.md).
  */
 export async function fingerprintWorkspace(root: string, log: Logger): Promise<string> {
-  const reader = new WorkspaceReader(root, log)
+  const reader = new WorkspaceReader(root, log, true)
   const config = resolveConfig(await reader.readText(CONFIG_PATH))
   const paths = [
     CONFIG_PATH,

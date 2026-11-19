@@ -55,6 +55,7 @@ function handlers(): ViewHandlers & { opened: string[]; ran: string[] } {
     run: (command) => ran.push(command.id),
     open: (path) => opened.push(path),
     dismiss: () => undefined,
+    toggleDone: () => undefined,
     argInput: () => undefined,
     argValue: () => 'typed'
   }
@@ -92,6 +93,8 @@ test('plan shows progress, phases, next task and commit task', () => {
   const tree = view(state({ kind: 'in-progress', ...ready }), en, handlers())
   const text = textOf(tree)
   assert.match(text, /1\/3 tasks/)
+  assert.match(text, /Completed \(1\)/)
+  assert.ok(!text.includes('1. Model'), 'done tasks are folded by default')
   assert.match(text, /Phase 1/)
   assert.equal(findAll(tree, byClass('next')).length, 1)
   assert.equal(findAll(tree, byClass('commit')).length, 1)
@@ -129,4 +132,21 @@ test('not installed offers set up only; Russian texts', () => {
 test('error notice is an alert', () => {
   const tree = view(state({ kind: 'no-workspace' }, { notice: { kind: 'error', lead: 'Failed', detail: 'timeout' } }), en, handlers())
   assert.equal(findAll(tree, (node) => node.attrs.role === 'alert').length, 1)
+})
+
+test('completed tasks unfold, code ticks are stripped', () => {
+  const status: AifStatus = {
+    kind: 'in-progress',
+    ...ready,
+    plan: { ...ready.plan!, tasks: [...ready.plan!.tasks, { id: 4, title: 'Run `orca plugin test`', done: false, isCommit: false, phase: null }] }
+  }
+  const text = textOf(view(state(status, { showDone: true }), en, handlers()))
+  assert.match(text, /1\. Model/)
+  assert.match(text, /4\. Run orca plugin test/)
+})
+
+test('workspace name equal to the branch is shown once', () => {
+  const same = { ...workspace, name: 'feature/auth' }
+  const tree = view(state({ kind: 'remote', workspace: same }), en, handlers())
+  assert.ok(!textOf(tree).includes('feature/auth · feature/auth'))
 })

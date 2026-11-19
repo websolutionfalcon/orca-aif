@@ -17,6 +17,8 @@ export interface PanelState {
   agents: PanelAgent[]
   pending: AifCommandId | null
   notice: Notice | null
+  /** Completed plan tasks are folded away unless this is on. */
+  showDone: boolean
 }
 
 export const INITIAL_STATE: PanelState = {
@@ -25,7 +27,8 @@ export const INITIAL_STATE: PanelState = {
   commands: [],
   agents: [],
   pending: null,
-  notice: null
+  notice: null,
+  showDone: false
 }
 
 export type Action =
@@ -36,6 +39,7 @@ export type Action =
   | { type: 'commandDone'; action: CommandAction; text: string; lead: string }
   | { type: 'failed'; lead: string; message: string }
   | { type: 'dismiss' }
+  | { type: 'toggleDone' }
 
 export function reduce(state: PanelState, action: Action): PanelState {
   switch (action.type) {
@@ -53,5 +57,7 @@ export function reduce(state: PanelState, action: Action): PanelState {
       return { ...state, loading: false, pending: null, notice: { kind: 'error', lead: action.lead, detail: action.message } }
     case 'dismiss':
       return { ...state, notice: null }
+    case 'toggleDone':
+      return { ...state, showDone: !state.showDone }
   }
 }

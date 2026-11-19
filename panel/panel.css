@@ -130,6 +130,15 @@ li.next .text {
   font-weight: 600;
 }
 
+.clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
 .phase {
   margin: 8px 0 2px;
   font-size: 12px;

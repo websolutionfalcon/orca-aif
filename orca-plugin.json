@@ -4,6 +4,14 @@
   "name": "AI Factory",
   "version": "0.1.0",
   "description": "AI Factory workflow in Orca: quick /aif commands for the workspace agent and live plan, roadmap and setup status in the status bar and the right sidebar.",
+  "license": "MIT",
+  "author": {
+    "name": "Slava Mehovich",
+    "url": "https://github.com/websolutionfalcon"
+  },
+  "repository": "https://github.com/websolutionfalcon/orca-aif",
+  "homepage": "https://github.com/websolutionfalcon/orca-aif#readme",
+  "icon": "assets/icon.png",
   "engines": {
     "orca": ">=1.4.259"
   },

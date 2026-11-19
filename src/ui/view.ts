@@ -10,6 +10,7 @@ export interface ViewHandlers {
   run(command: PanelCommand): void
   open(path: string): void
   dismiss(): void
+  toggleDone(): void
   argInput(command: PanelCommand, value: string): void
   argValue(command: PanelCommand): string
 }
@@ -36,7 +37,8 @@ function progress(done: number, total: number): VNode {
 function header(state: PanelState, t: PanelTexts, handlers: ViewHandlers): VNode {
   const status = state.status
   const workspace = status && 'workspace' in status ? status.workspace : null
-  const where = workspace ? `${workspace.name}${workspace.branch ? ` · ${workspace.branch}` : ''}` : ''
+  const branch = workspace?.branch && workspace.branch !== workspace.name ? ` · ${workspace.branch}` : ''
+  const where = workspace ? `${workspace.name}${branch}` : ''
   return h(
     'header',
     { class: 'header' },
@@ -75,29 +77,49 @@ function contextCard(status: Ready, t: PanelTexts, handlers: ViewHandlers): VNod
   )
 }
 
-function taskList(plan: PlanInfo, t: PanelTexts): VNode[] {
+/** Task text without markdown code ticks; the full text stays in the tooltip. */
+export function plainText(text: string): string {
+  return text.replace(/`([^`]*)`/g, '$1')
+}
+
+function taskList(plan: PlanInfo, state: PanelState, t: PanelTexts, handlers: ViewHandlers): VNode[] {
   const nextIndex = plan.tasks.findIndex((task) => !task.done)
   const nodes: VNode[] = []
-  let phase: string | null | undefined
-  plan.tasks.forEach((task, index) => {
-    if (task.phase !== phase) {
-      phase = task.phase
-      if (phase) nodes.push(h('div', { class: 'phase' }, phase))
-    }
-    const classes = [task.done ? 'done' : '', task.isCommit ? 'commit' : '', index === nextIndex ? 'next' : ''].filter(Boolean).join(' ')
+  if (plan.done > 0) {
     nodes.push(
       h(
         'li',
-        { class: classes || undefined, attrs: { title: index === nextIndex ? t.next : undefined } },
+        null,
+        h(
+          'button',
+          { class: 'link subtle', attrs: { type: 'button', 'data-key': 'toggle-done', 'aria-expanded': state.showDone }, on: { click: () => handlers.toggleDone() } },
+          `${state.showDone ? '▾' : '▸'} ${t.completed} (${plan.done})`
+        )
+      )
+    )
+  }
+  let phase: string | null | undefined
+  plan.tasks.forEach((task, index) => {
+    if (task.done && !state.showDone) return
+    if (task.phase !== phase) {
+      phase = task.phase
+      if (phase) nodes.push(h('li', { class: 'phase' }, plainText(phase)))
+    }
+    const classes = [task.done ? 'done' : '', task.isCommit ? 'commit' : '', index === nextIndex ? 'next' : ''].filter(Boolean).join(' ')
+    const text = plainText(task.id !== null ? `${task.id}. ${task.title}` : task.title)
+    nodes.push(
+      h(
+        'li',
+        { class: classes || undefined },
         h('span', { class: 'mark' }, task.done ? '✓' : index === nextIndex ? '▶' : '○'),
-        h('span', { class: 'text' }, task.id !== null ? `${task.id}. ${task.title}` : task.title)
+        h('span', { class: 'text clamp', attrs: { title: text } }, text)
       )
     )
   })
   return nodes
 }
 
-function planCard(status: Ready, t: PanelTexts, handlers: ViewHandlers): VNode {
+function planCard(status: Ready, state: PanelState, t: PanelTexts, handlers: ViewHandlers): VNode {
   if (status.kind === 'ambiguous') {
     return card(
       t.plan,
@@ -109,10 +131,10 @@ function planCard(status: Ready, t: PanelTexts, handlers: ViewHandlers): VNode {
   if (!plan) return card(t.plan, h('p', { class: 'subtle' }, t.noPlan))
   return card(
     t.plan,
-    h('div', { class: 'row' }, fileLink(plan.path, plan.title ?? plan.path, handlers), h('span', { class: 'subtle' }, t.kinds[plan.kind])),
+    h('div', { class: 'row' }, fileLink(plan.path, plainText(plan.title ?? plan.path), handlers), h('span', { class: 'subtle' }, t.kinds[plan.kind])),
     progress(plan.done, plan.total),
     h('div', { class: 'subtle' }, status.kind === 'done' ? t.allDone : `${plan.done}/${plan.total} ${t.tasks}`),
-    h('ul', { class: 'tasks' }, taskList(plan, t))
+    h('ul', { class: 'tasks' }, taskList(plan, state, t, handlers))
   )
 }
 
@@ -228,7 +250,7 @@ export function view(state: PanelState, t: PanelTexts, handlers: ViewHandlers): 
     )
   } else {
     parts.push(
-      planCard(status, t, handlers),
+      planCard(status, state, t, handlers),
       commandsCard(state.commands, state, t, handlers),
       agentCard(state.agents, t),
       roadmapCard(status, t, handlers),

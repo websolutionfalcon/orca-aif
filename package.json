@@ -2,17 +2,13 @@
   "name": "orca-aif",
   "version": "0.1.0",
   "private": true,
-  "description": "AI Factory plugin for Orca ADE (dev tooling only; Orca loads the sources directly).",
+  "description": "AI Factory plugin for Orca ADE. No dependencies: Orca loads the sources directly; these scripts are dev helpers.",
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "typecheck": "tsc -p .",
+    "typecheck": "npx -y -p typescript@5.9.3 tsc -p .",
     "test": "orca plugin test . --json",
     "check": "orca plugin check . --json",
     "validate": "orca plugin validate . --json"
-  },
-  "devDependencies": {
-    "@types/node": "24.19.2",
-    "typescript": "5.9.3"
   }
 }

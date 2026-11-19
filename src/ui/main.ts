@@ -99,6 +99,9 @@ const handlers = {
   dismiss(): void {
     dispatch({ type: 'dismiss' })
   },
+  toggleDone(): void {
+    dispatch({ type: 'toggleDone' })
+  },
   argInput(command: PanelCommand, value: string): void {
     args.set(command.id, value)
   },
