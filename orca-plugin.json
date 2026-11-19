@@ -12,6 +12,27 @@
   "repository": "https://github.com/websolutionfalcon/orca-aif",
   "homepage": "https://github.com/websolutionfalcon/orca-aif#readme",
   "icon": "assets/icon.png",
+  "cover": {
+    "path": "assets/cover.png",
+    "alt": "AI Factory for Orca: plugin icon and title beside the sidebar panel with a plan at 4/8 tasks and command buttons."
+  },
+  "screenshots": [
+    {
+      "path": "assets/screenshot-1.png",
+      "alt": "Orca window: Claude Code runs /aif-implement, the AI Factory panel shows the plan, the status bar shows AIF 4/8.",
+      "caption": "Live plan progress next to the agent"
+    },
+    {
+      "path": "assets/screenshot-2.png",
+      "alt": "The AI Factory panel after sending $aif-plan to a Codex agent; the command appears in the Codex terminal.",
+      "caption": "One-click commands, with the right prefix for Claude or Codex"
+    },
+    {
+      "path": "assets/screenshot-3.png",
+      "alt": "Three AI Factory panels side by side: light theme, dark theme and Russian interface.",
+      "caption": "Follows Orca theme and language"
+    }
+  ],
   "engines": {
     "orca": ">=1.4.259"
   },
