@@ -46,7 +46,7 @@ test('an empty plans/ folder and a plan without checkboxes: in progress 0/0, not
   assert.equal(statusBarOf(status).text, 'AIF 0/0')
 })
 
-test('an ultra folder without the marker is ignored, two markers are an error', async () => {
+test('an ultra folder without the marker is ignored, two markers are skipped with a warning', async () => {
   await write('.ai-factory/plans/notes/index.md', '# just notes\n- [ ] Task 1: x\n')
   await write('.ai-factory/plans/feature-other.md', '- [ ] Task 1: y\n')
   const single = await statusOf()
@@ -54,8 +54,8 @@ test('an ultra folder without the marker is ignored, two markers are an error', 
 
   await write('.ai-factory/plans/broken/index.md', '<!-- aif:plan-mode:ultra -->\n<!-- aif:plan-mode:ultra -->\n')
   const broken = await statusOf()
-  assert.equal(broken.kind, 'error')
-  assert.equal(statusBarOf(broken).tone, 'danger')
+  assert.ok('plan' in broken && broken.plan?.path === '.ai-factory/plans/feature-other.md')
+  assert.ok('warnings' in broken && broken.warnings.some((w) => w.includes('2 ultra markers')))
 })
 
 test('Windows separators in config paths', async () => {
@@ -106,4 +106,28 @@ test('switching branches switches the plan', async () => {
   const switched = await service.refresh('event:workspace.changed')
   assert.equal(switched.kind, 'done')
   assert.equal(bars.at(-1)?.text, 'AIF ✓ 1/1')
+})
+
+test('regression: a branch checkout changes the fingerprint even when no plan file changes', async () => {
+  await mkdir(join(root, '.git'), { recursive: true })
+  await write('.git/HEAD', 'ref: refs/heads/feature/auth\n')
+  await write('.ai-factory/plans/feature-auth.md', '- [ ] Task 1: a\n')
+  const before = await fingerprintWorkspace(root, log())
+  await new Promise((done) => setTimeout(done, 20))
+  await write('.git/HEAD', 'ref: refs/heads/feature/billing\n')
+  assert.notEqual(await fingerprintWorkspace(root, log()), before)
+})
+
+test('regression: a worktree .git file pointing outside the workspace is followed for HEAD only', async () => {
+  const gitdir = await mkdtemp(join(tmpdir(), 'aif-gitdir-'))
+  try {
+    await writeFile(join(gitdir, 'HEAD'), 'ref: refs/heads/a\n')
+    await write('.git', `gitdir: ${gitdir}\n`)
+    const before = await fingerprintWorkspace(root, log())
+    await new Promise((done) => setTimeout(done, 20))
+    await writeFile(join(gitdir, 'HEAD'), 'ref: refs/heads/bb\n')
+    assert.notEqual(await fingerprintWorkspace(root, log()), before)
+  } finally {
+    await rm(gitdir, { recursive: true, force: true })
+  }
 })

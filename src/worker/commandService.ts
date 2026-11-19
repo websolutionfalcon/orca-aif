@@ -31,11 +31,16 @@ export interface CommandServiceDeps {
   workspaceId: () => Promise<string | null>
 }
 
-const STATE_ORDER: ListedAgent['state'][] = ['waiting', 'done', 'working', 'blocked']
+const STATE_ORDER: ListedAgent['state'][] = ['waiting', 'done', 'working']
 
-/** The agent to type into: idle ones first, then busy ones; only agents with a terminal. */
+/**
+ * The agent to type into: idle ones first, then busy ones; only agents with a terminal. An agent
+ * `blocked` on a permission prompt is never picked: typed text and Enter would answer the prompt.
+ */
 export function pickAgent(agents: ListedAgent[]): (ListedAgent & { terminalId: string }) | null {
-  const usable = agents.filter((agent): agent is ListedAgent & { terminalId: string } => Boolean(agent.terminalId))
+  const usable = agents.filter(
+    (agent): agent is ListedAgent & { terminalId: string } => Boolean(agent.terminalId) && agent.state !== 'blocked'
+  )
   usable.sort((a, b) => STATE_ORDER.indexOf(a.state) - STATE_ORDER.indexOf(b.state))
   return usable[0] ?? null
 }
@@ -56,10 +61,16 @@ export function createCommandService(deps: CommandServiceDeps) {
     try {
       let agent: ReturnType<typeof pickAgent> = null
       if (settings.sendMode === 'agent-or-launch') {
+        let agents: ListedAgent[] = []
         try {
-          agent = pickAgent(await host.listAgents())
+          agents = await host.listAgents()
         } catch (error) {
           log.warn('command', 'agents.list failed; starting a new agent', { error: messageOf(error) })
+        }
+        agent = pickAgent(agents)
+        if (!agent && agents.some((candidate) => candidate.state === 'blocked' && candidate.terminalId)) {
+          log.info('command', '[FIX:blocked-agent] refused: the only agent waits for a permission answer', { command: command.id })
+          return refuse(command.id, 'the agent in this workspace is waiting for a permission answer; answer it first')
         }
       }
       const prefix = prefixFor(agent?.agent ?? settings.defaultAgent, settings.commandPrefix)

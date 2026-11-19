@@ -110,7 +110,7 @@ const handlers = {
   }
 }
 
-orca.plugin.on('status.changed', (status) => dispatch({ type: 'status', status }))
+orca.plugin.on('status.changed', ({ status, commands }) => dispatch({ type: 'loaded', status, commands }))
 orca.on('agent.status.changed', () => void loadAgents())
 orca.on('workspace.changed', () => void loadAgents())
 draw()

@@ -6,7 +6,7 @@ import { buildStatus, installedAgentsOf, statusBarOf, summaryOf, type StatusInpu
 import type { WorkspaceRef } from './types.ts'
 
 const workspace: WorkspaceRef = { id: 'w1', name: 'orca-aif', branch: 'feature/x', path: '/tmp/w', hostId: 'local' }
-const none: DiscoveryResult = { plan: null, reason: 'none', candidates: [], integrityError: null }
+const none: DiscoveryResult = { plan: null, reason: 'none', candidates: [], warnings: [] }
 const input = (overrides: Partial<StatusInput> = {}): StatusInput => ({
   workspace,
   installed: true,
@@ -23,7 +23,7 @@ const fullPlan: DiscoveryResult = {
   plan: { path: '.ai-factory/plans/feature-x.md', kind: 'full' },
   reason: 'branch',
   candidates: [],
-  integrityError: null
+  warnings: []
 }
 
 describe('buildStatus', () => {
@@ -31,9 +31,9 @@ describe('buildStatus', () => {
     assert.equal(buildStatus(input({ installed: false })).kind, 'not-installed')
   })
 
-  test('integrity error', () => {
-    const status = buildStatus(input({ discovery: { ...none, integrityError: 'broken' } }))
-    assert.deepEqual(status, { kind: 'error', workspace, message: 'broken' })
+  test('discovery warnings are carried', () => {
+    const status = buildStatus(input({ discovery: { ...none, warnings: ['skipped broken bundle'] } }))
+    assert.ok(status.kind === 'no-plan' && status.warnings.includes('skipped broken bundle'))
   })
 
   test('no plan', () => {
@@ -41,7 +41,7 @@ describe('buildStatus', () => {
   })
 
   test('ambiguous keeps candidates', () => {
-    const status = buildStatus(input({ discovery: { plan: null, reason: 'ambiguous', candidates: ['a.md', 'b.md'], integrityError: null } }))
+    const status = buildStatus(input({ discovery: { plan: null, reason: 'ambiguous', candidates: ['a.md', 'b.md'], warnings: [] } }))
     assert.equal(status.kind, 'ambiguous')
     assert.ok(status.kind === 'ambiguous' && status.candidates.length === 2)
   })
@@ -111,7 +111,7 @@ test("end to end over this repository's .ai-factory/", () => {
   const status = buildStatus(
     input({
       config,
-      discovery: { plan: { path: '.ai-factory/plans/feature-orca-aif-plugin.md', kind: 'full' }, reason: 'branch', candidates: [], integrityError: null },
+      discovery: { plan: { path: '.ai-factory/plans/feature-orca-aif-plugin.md', kind: 'full' }, reason: 'branch', candidates: [], warnings: [] },
       planText: read('.ai-factory/plans/feature-orca-aif-plugin.md'),
       roadmapText: read('.ai-factory/ROADMAP.md'),
       installJson: read('.ai-factory.json')

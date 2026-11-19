@@ -125,8 +125,8 @@ export interface DiscoveryResult {
   reason: PlanDiscoveryReason
   /** Entrypoints to choose from when `reason` is `ambiguous`. */
   candidates: string[]
-  /** A marked bundle that is malformed (several markers); the status shows an error. */
-  integrityError: string | null
+  /** Bundles skipped as malformed (several ultra markers), as `/aif-implement` skips them. */
+  warnings: string[]
 }
 
 function joinRel(dir: string, name: string): string {
@@ -144,8 +144,15 @@ export function discoverPlan(input: DiscoverInput): DiscoveryResult {
   const plansDir = config.paths.plans
   const active = entries.filter((entry) => !isUnder(joinRel(plansDir, entry.name), config.paths.archive))
   const ultraPath = (name: string): string => joinRel(joinRel(plansDir, name), 'index.md')
-  const malformed = (entry: PlansDirEntry): string =>
-    `${ultraPath(entry.name)} has ${entry.ultraMarkers} ultra markers; expected exactly one`
+  const warnings = active
+    .filter((entry) => entry.isDir && (entry.ultraMarkers ?? 0) > 1)
+    .map((entry) => `${ultraPath(entry.name)} has ${entry.ultraMarkers} ultra markers; expected exactly one, skipped`)
+  const result = (plan: DiscoveredPlan | null, reason: PlanDiscoveryReason, candidates: string[] = []): DiscoveryResult => ({
+    plan,
+    reason,
+    candidates,
+    warnings
+  })
 
   // 1. Branch-based full/ultra artifact.
   if (config.git.enabled && input.branch) {
@@ -156,10 +163,7 @@ export function discoverPlan(input: DiscoverInput): DiscoveryResult {
       for (const entry of active) {
         const match = pattern.exec(entry.name)
         if (!match || entry.isDir === Boolean(match[2])) continue
-        if (entry.isDir && entry.ultraMarkers !== 1) {
-          if ((entry.ultraMarkers ?? 0) > 1) return { plan: null, reason: 'none', candidates: [], integrityError: malformed(entry) }
-          continue
-        }
+        if (entry.isDir && entry.ultraMarkers !== 1) continue
         const prefix = Number(match[1])
         if (!best || prefix > best.prefix || (prefix === best.prefix && entry.isDir)) best = { prefix, entry }
       }
@@ -167,16 +171,13 @@ export function discoverPlan(input: DiscoverInput): DiscoveryResult {
         const plan: DiscoveredPlan = best.entry.isDir
           ? { path: ultraPath(best.entry.name), kind: 'ultra' }
           : { path: joinRel(plansDir, best.entry.name), kind: 'full' }
-        return { plan, reason: 'branch', candidates: [], integrityError: null }
+        return result(plan, 'branch')
       }
     }
     const dir = active.find((entry) => entry.isDir && entry.name === stem)
-    if (dir && (dir.ultraMarkers ?? 0) > 1) return { plan: null, reason: 'none', candidates: [], integrityError: malformed(dir) }
-    if (dir && dir.ultraMarkers === 1) {
-      return { plan: { path: ultraPath(stem), kind: 'ultra' }, reason: 'branch', candidates: [], integrityError: null }
-    }
+    if (dir && dir.ultraMarkers === 1) return result({ path: ultraPath(stem), kind: 'ultra' }, 'branch')
     if (active.some((entry) => !entry.isDir && entry.name === `${stem}.md`)) {
-      return { plan: { path: joinRel(plansDir, `${stem}.md`), kind: 'full' }, reason: 'branch', candidates: [], integrityError: null }
+      return result({ path: joinRel(plansDir, `${stem}.md`), kind: 'full' }, 'branch')
     }
   }
 
@@ -184,7 +185,6 @@ export function discoverPlan(input: DiscoverInput): DiscoveryResult {
   const named: DiscoveredPlan[] = []
   for (const entry of active) {
     if (entry.isDir) {
-      if ((entry.ultraMarkers ?? 0) > 1) return { plan: null, reason: 'none', candidates: [], integrityError: malformed(entry) }
       if (entry.ultraMarkers === 1) named.push({ path: ultraPath(entry.name), kind: 'ultra' })
       continue
     }
@@ -193,15 +193,13 @@ export function discoverPlan(input: DiscoverInput): DiscoveryResult {
     if (path === config.paths.plan || path === config.paths.fixPlan) continue
     named.push({ path, kind: 'full' })
   }
-  if (named.length === 1) return { plan: named[0], reason: 'single-named', candidates: [], integrityError: null }
-  if (named.length > 1) {
-    return { plan: null, reason: 'ambiguous', candidates: named.map((plan) => plan.path).sort(), integrityError: null }
-  }
+  if (named.length === 1) return result(named[0], 'single-named')
+  if (named.length > 1) return result(null, 'ambiguous', named.map((plan) => plan.path).sort())
 
   // 3. Fast plan, 4. fix plan.
-  if (input.fastPlanExists) return { plan: { path: config.paths.plan, kind: 'fast' }, reason: 'fast', candidates: [], integrityError: null }
-  if (input.fixPlanExists) return { plan: { path: config.paths.fixPlan, kind: 'fix' }, reason: 'fix', candidates: [], integrityError: null }
-  return { plan: null, reason: 'none', candidates: [], integrityError: null }
+  if (input.fastPlanExists) return result({ path: config.paths.plan, kind: 'fast' }, 'fast')
+  if (input.fixPlanExists) return result({ path: config.paths.fixPlan, kind: 'fix' }, 'fix')
+  return result(null, 'none')
 }
 
 function escapeRegExp(value: string): string {

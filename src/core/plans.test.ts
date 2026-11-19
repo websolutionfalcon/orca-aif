@@ -152,9 +152,12 @@ describe('discoverPlan', () => {
     assert.equal(result.reason, 'ambiguous')
   })
 
-  test('a bundle with two markers is an integrity error', () => {
-    const result = discoverPlan({ ...base, branch: 'main', config: slug, entries: [dir('broken', 2)] })
-    assert.match(result.integrityError ?? '', /2 ultra markers/)
+  test('regression: a bundle with two markers is skipped like /aif-implement does, with a warning', () => {
+    const named = discoverPlan({ ...base, branch: 'main', config: slug, entries: [dir('broken', 2), file('feature-x.md')] })
+    assert.deepEqual(named.plan, { path: '.ai-factory/plans/feature-x.md', kind: 'full' })
+    assert.match(named.warnings.join('\n'), /2 ultra markers/)
+    const branch = discoverPlan({ ...base, branch: 'feature/auth', config: slug, entries: [dir('feature-auth', 2), file('feature-auth.md')] })
+    assert.deepEqual(branch.plan, { path: '.ai-factory/plans/feature-auth.md', kind: 'full' })
   })
 
   test('an archive nested in plans/ is excluded', () => {

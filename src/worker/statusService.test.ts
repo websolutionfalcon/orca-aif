@@ -107,3 +107,82 @@ test('concurrent refreshes share one follow-up', async () => {
   const refreshed = logs.filter((line) => line.startsWith('DEBUG [aif:status] refreshed')).length
   assert.equal(refreshed, 2)
 })
+
+test('regression: switching to another workspace whose plan at the same path is done does not notify', async () => {
+  const other = await mkdtemp(join(tmpdir(), 'aif-status-b-'))
+  try {
+    await write('.ai-factory/PLAN.md', '- [ ] Task 1: a\n')
+    await mkdir(join(other, '.ai-factory'), { recursive: true })
+    await writeFile(join(other, '.ai-factory', 'PLAN.md'), '- [x] Task 1: a\n')
+    const notes: string[] = []
+    let context: WorkspaceContext = { workspaceId: 'w1', branch: 'main', displayName: 'a', terminals: [] }
+    const host = {
+      readContext: async () => context,
+      listWorkspaces: async () => [
+        { id: 'w1', kind: 'worktree', name: 'a', path: root, branch: 'main', hostId: 'local' },
+        { id: 'w2', kind: 'worktree', name: 'b', path: other, branch: 'main', hostId: 'local' }
+      ],
+      updateStatusBar: async () => undefined,
+      notify: async (_t: string, body: string) => void notes.push(body)
+    } as unknown as OrcaHost
+    const service = createStatusService({
+      host,
+      log: createLogger({ log: (m: string) => logs.push(m) }, () => 'debug'),
+      storage: { get: async () => null, set: async () => undefined },
+      post: () => undefined,
+      notifyOnPlanDone: () => true
+    })
+    assert.equal((await service.refresh('a')).kind, 'in-progress')
+    context = { workspaceId: 'w2', branch: 'main', displayName: 'b', terminals: [] }
+    assert.equal((await service.refresh('switch')).kind, 'done')
+    assert.deepEqual(notes, [])
+  } finally {
+    await rm(other, { recursive: true, force: true })
+  }
+})
+
+test('regression: a throwing post does not break later refreshes', async () => {
+  await write('.ai-factory/PLAN.md', '- [ ] Task 1: a\n')
+  const host = {
+    readContext: async () => ({ workspaceId: 'w1', branch: 'main', displayName: 'repo', terminals: [] }),
+    listWorkspaces: async () => [{ id: 'w1', kind: 'worktree', name: 'repo', path: root, branch: 'main', hostId: 'local' }],
+    updateStatusBar: async () => undefined,
+    notify: async () => undefined
+  } as unknown as OrcaHost
+  let throwing = true
+  const service = createStatusService({
+    host,
+    log: createLogger({ log: (m: string) => logs.push(m) }, () => 'debug'),
+    storage: { get: async () => null, set: async () => undefined },
+    post: () => {
+      if (throwing) throw new Error('payload too large')
+    },
+    notifyOnPlanDone: () => true
+  })
+  const [first, second] = await Promise.all([service.refresh('1'), service.refresh('2')])
+  assert.equal(first.kind, 'in-progress')
+  assert.equal(second.kind, 'in-progress')
+  throwing = false
+  await write('.ai-factory/PLAN.md', '- [x] Task 1: a\n')
+  const [third, fourth] = await Promise.all([service.refresh('3'), service.refresh('4')])
+  assert.equal(third.kind, 'done')
+  assert.equal(fourth.kind, 'done')
+})
+
+test('a plan finished while the worker was stopped still notifies after restoring the same workspace', async () => {
+  await write('.ai-factory/plans/feature-auth.md', '# Auth\n- [x] Task 1: a\n')
+  const { service, notes, store } = setup()
+  store.set(LAST_STATUS_KEY, {
+    kind: 'in-progress',
+    workspace: { id: 'w1', name: 'repo', branch: 'feature/auth', path: root, hostId: 'local' },
+    artifacts: [],
+    plan: { path: '.ai-factory/plans/feature-auth.md', kind: 'full', title: 'Auth', branch: null, tasks: [], done: 0, total: 1, milestones: [], archived: false },
+    planReason: 'branch',
+    candidates: [],
+    roadmap: null,
+    installedAgents: [],
+    warnings: []
+  })
+  assert.equal((await service.refresh('activate')).kind, 'done')
+  assert.deepEqual(notes, ['Auth: All tasks are done.'])
+})

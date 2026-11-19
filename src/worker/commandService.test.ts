@@ -102,3 +102,25 @@ test('pickAgent prefers idle agents with a terminal', () => {
   assert.equal(pickAgent([busy, headless, codex])?.terminalId, 't2')
   assert.equal(pickAgent([headless]), null)
 })
+
+describe('regressions (review)', () => {
+  test('never types into an agent blocked on a permission prompt', async () => {
+    const blocked: ListedAgent = { ...claude, terminalId: 'tb', state: 'blocked' }
+    const { service, calls } = setup([blocked])
+    const sent = await service.run({ command: 'verify', source: 'panel' })
+    assert.equal(sent.ok, false)
+    const typed = await service.run({ command: 'fix', source: 'palette' })
+    assert.equal(typed.ok, false)
+    assert.deepEqual(calls.sent, [])
+    assert.deepEqual(calls.launched, [])
+  })
+
+  test('a blocked agent is skipped when another agent is usable', async () => {
+    const blocked: ListedAgent = { ...claude, terminalId: 'tb', state: 'blocked' }
+    const busy: ListedAgent = { ...codex, terminalId: 'tw', state: 'working' }
+    const { service, calls } = setup([blocked, busy])
+    const result = await service.run({ command: 'verify', source: 'panel' })
+    assert.ok(result.ok && result.terminalId === 'tw')
+    assert.equal(calls.sent[0].terminalId, 'tw')
+  })
+})

@@ -17,3 +17,17 @@ test('a new command clears the previous notice', () => {
   const state = reduce({ ...INITIAL_STATE, notice: { kind: 'error', lead: 'x', detail: 'y' } }, { type: 'pending', command: 'fix' })
   assert.equal(state.notice, null)
 })
+
+test('a status.changed payload replaces both status and command buttons', () => {
+  const before = reduce(INITIAL_STATE, {
+    type: 'loaded',
+    status: { kind: 'no-workspace' },
+    commands: [{ id: 'plan', label: '/aif-plan', title: 'Plan', arg: 'required', argHint: '' }]
+  })
+  const after = reduce(before, {
+    type: 'loaded',
+    status: { kind: 'no-workspace' },
+    commands: [{ id: 'plan', label: '$aif-plan', title: 'Plan', arg: 'required', argHint: '' }]
+  })
+  assert.equal(after.commands[0].label, '$aif-plan')
+})

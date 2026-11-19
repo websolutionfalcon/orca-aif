@@ -41,9 +41,7 @@ export function installedAgentsOf(json: string | null): string[] {
 export function buildStatus(input: StatusInput): AifStatus {
   const { workspace, discovery } = input
   if (!input.installed) return { kind: 'not-installed', workspace }
-  if (discovery.integrityError) return { kind: 'error', workspace, message: discovery.integrityError }
-
-  const warnings = [...input.config.warnings, ...input.warnings]
+  const warnings = [...input.config.warnings, ...discovery.warnings, ...input.warnings]
   const plan = discovery.plan && input.planText !== null
     ? parsePlan(input.planText, discovery.plan.path, discovery.plan.kind)
     : null

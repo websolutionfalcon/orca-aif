@@ -6,7 +6,7 @@ import { AIF_COMMANDS, findCommand, prefixFor } from './core/commands.ts'
 import { summaryOf } from './core/status.ts'
 import type { AifStatus } from './core/types.ts'
 import type { Outcome, PanelCommand } from './protocol.ts'
-import { createCommandService } from './worker/commandService.ts'
+import { createCommandService, pickAgent } from './worker/commandService.ts'
 import { createLogger, messageOf, type Logger } from './worker/log.ts'
 import { createOrcaHost } from './worker/orcaHost.ts'
 import { DEFAULT_SETTINGS, parseSettings, type Settings } from './worker/settings.ts'
@@ -52,7 +52,7 @@ export default function activate(orca: OrcaWorkerApi): void {
     host,
     log,
     storage: orca.storage,
-    post: (next) => orca.panels.post('status.changed', next),
+    post: (next) => void postStatus(next),
     notifyOnPlanDone: () => settings.notifyOnPlanDone,
     locale
   })
@@ -82,7 +82,7 @@ export default function activate(orca: OrcaWorkerApi): void {
     watcher = createWatcher({
       intervalMs: interval,
       fingerprint: () => fingerprintWorkspace(root, log),
-      onChange: () => void refresh('poll'),
+      onChange: () => refreshInBackground('poll'),
       log
     })
   }
@@ -91,6 +91,19 @@ export default function activate(orca: OrcaWorkerApi): void {
     const next = await status.refresh(reason)
     syncWatcher()
     return next
+  }
+
+  /** Fire-and-forget refresh for events and timers: a failure is logged, never unhandled. */
+  function refreshInBackground(reason: string): void {
+    refresh(reason).catch((error: unknown) => log.error('status', '[FIX:refresh] background refresh failed', { reason, error: messageOf(error) }))
+  }
+
+  async function postStatus(next: AifStatus): Promise<void> {
+    try {
+      orca.panels.post('status.changed', { status: next, commands: await panelCommands(next) })
+    } catch (error) {
+      log.warn('panel', '[FIX:post] status.changed not delivered', { error: messageOf(error) })
+    }
   }
 
   async function loadSettings(): Promise<void> {
@@ -102,9 +115,20 @@ export default function activate(orca: OrcaWorkerApi): void {
     }
   }
 
-  function panelCommands(): PanelCommand[] {
-    const installed = 'installedAgents' in status.current() ? (status.current() as { installedAgents: string[] }).installedAgents : []
-    const prefix = prefixFor(installed.length === 1 ? installed[0] : settings.defaultAgent, settings.commandPrefix)
+  /** Buttons with the prefix the command would actually be sent with (running agent first). */
+  async function panelCommands(current: AifStatus = status.current()): Promise<PanelCommand[]> {
+    const installed = 'installedAgents' in current ? current.installedAgents : []
+    let running: string | null = null
+    if (settings.sendMode === 'agent-or-launch') {
+      try {
+        running = pickAgent(await host.listAgents())?.agent ?? null
+      } catch (error) {
+        log.debug('panel', 'agents.list failed while labelling commands', { error: messageOf(error) })
+      }
+    }
+    const fallback = settings.sendMode === 'always-launch' ? settings.defaultAgent : installed.length === 1 ? installed[0] : settings.defaultAgent
+    const prefix = prefixFor(running ?? fallback, settings.commandPrefix)
+    log.debug('panel', '[FIX:prefix] command labels', { prefix, running, fallback })
     return settings.panelCommands
       .map((id) => findCommand(id))
       .filter((command): command is NonNullable<typeof command> => Boolean(command))
@@ -138,18 +162,21 @@ export default function activate(orca: OrcaWorkerApi): void {
   }
 
   // Orca events.
-  disposables.push(orca.events.on('workspace.changed', () => void refresh('event:workspace.changed')))
-  disposables.push(orca.events.on('agent.status.changed', () => void refresh('event:agent.status.changed')))
+  disposables.push(orca.events.on('workspace.changed', () => refreshInBackground('event:workspace.changed')))
+  disposables.push(orca.events.on('agent.status.changed', () => refreshInBackground('event:agent.status.changed')))
 
   // Settings and panel requests.
   disposables.push(
     orca.settings.onDidChange(() => {
-      void loadSettings().then(() => refresh('settings'))
+      void loadSettings().then(() => refreshInBackground('settings'))
     })
   )
   disposables.push(
     orca.panels.handle('status.get', () =>
-      answer('status.get', async () => ({ ok: true, status: await refresh('panel'), commands: panelCommands() }))
+      answer('status.get', async () => {
+        const current = await refresh('panel')
+        return { ok: true, status: current, commands: await panelCommands(current) }
+      })
     )
   )
   disposables.push(
@@ -190,7 +217,7 @@ export default function activate(orca: OrcaWorkerApi): void {
   }
 
   log.info('worker', `activated v${VERSION}`, { locale })
-  void loadSettings().then(() => refresh('activate'))
+  void loadSettings().then(() => refreshInBackground('activate'))
 }
 
 /** Orca awaits this before it stops the worker. */

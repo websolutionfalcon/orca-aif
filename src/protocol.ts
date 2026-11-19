@@ -41,7 +41,7 @@ declare module 'orca' {
     'agents.get': { output: Outcome<{ agents: PanelAgent[] }> }
   }
   interface PluginPanelEvents {
-    /** Posted to open panels whenever the status changes. */
-    'status.changed': AifStatus
+    /** Posted to open panels whenever the status changes, with the buttons it implies. */
+    'status.changed': { status: AifStatus; commands: PanelCommand[] }
   }
 }

@@ -203,6 +203,7 @@ export async function readWorkspace(ref: WorkspaceRef & { path: string }, log: L
     fastPlanExists: installed && (await reader.exists(config.paths.plan)),
     fixPlanExists: installed && (await reader.exists(config.paths.fixPlan))
   })
+  for (const warning of discovery.warnings) warnOnce(log, 'plans', `[FIX:malformed-ultra] ${warning}`, { root: ref.path })
   log.debug('fs', 'plan discovery', {
     workspace: ref.id,
     reason: discovery.reason,
@@ -248,5 +249,25 @@ export async function fingerprintWorkspace(root: string, log: Logger): Promise<s
   }
   const parts: string[] = []
   for (const path of paths) parts.push(await reader.signature(path.replace(/\\/g, '/')))
+  parts.push(await gitHeadSignature(reader, root))
   return parts.join('|')
+}
+
+/**
+ * mtime/size of the git HEAD file, so a branch checkout that changes no plan file still triggers a
+ * refresh (`workspace.changed` does not fire on checkout). A worktree's `.git` is a file pointing
+ * at its gitdir, usually outside the workspace: only that HEAD file is stat-ed there, never read.
+ */
+export async function gitHeadSignature(reader: WorkspaceReader, root: string): Promise<string> {
+  const dotGit = await reader.readText('.git')
+  if (dotGit === null) return reader.signature('.git/HEAD')
+  const match = /^gitdir:\s*(.+)$/m.exec(dotGit)
+  if (!match) return 'HEAD:unknown'
+  try {
+    const info = await stat(join(resolve(root, match[1].trim()), 'HEAD'))
+    return `HEAD:${info.mtimeMs}:${info.size}`
+  } catch (error) {
+    if (isMissing(error)) return 'HEAD:-'
+    throw error
+  }
 }

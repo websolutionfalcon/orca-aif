@@ -107,3 +107,42 @@ test('events refresh the status', async () => {
     await worker.deactivate()
   }
 })
+
+test('regression: panel commands follow the running agent and travel with status.changed', async () => {
+  const worker = await mountWorker(main, {
+    host: host([{ terminalId: 't2', title: 'Codex', agent: 'codex', state: 'waiting', stateStartedAt: 1 }])
+  })
+  try {
+    const answer = await worker.request('status.get')
+    assert.ok(answer.ok && answer.commands.find((command) => command.id === 'plan')?.label === '$aif-plan')
+    const post = worker.posts.find((entry) => entry.event === 'status.changed')
+    const payload = post?.payload as { status?: { kind: string }; commands?: { label: string }[] } | undefined
+    assert.equal(payload?.status?.kind, 'in-progress')
+    assert.ok(payload?.commands?.some((command) => command.label === '$aif-plan'))
+  } finally {
+    await worker.deactivate()
+  }
+})
+
+test('always-launch labels buttons with the default agent prefix, not the running agent', async () => {
+  const worker = await mountWorker(main, {
+    host: mockHost({
+      settings: { sendMode: 'always-launch', defaultAgent: 'codex' },
+      results: {
+        'workspace.readContext': { workspaceId: 'w1', branch: 'feature/auth', displayName: 'repo', terminals: [] },
+        'workspace.list': {
+          workspaces: [{ id: 'w1', kind: 'worktree', name: 'repo', path: root, branch: 'feature/auth', hostId: 'local' }],
+          truncated: false
+        },
+        'agents.list': { agents: [{ terminalId: 't1', title: 'Claude', agent: 'claude', state: 'waiting', stateStartedAt: 1 }] },
+        'statusBar.update': { ok: true }
+      }
+    })
+  })
+  try {
+    const answer = await worker.request('status.get')
+    assert.ok(answer.ok && answer.commands.every((command) => command.label.startsWith('$')))
+  } finally {
+    await worker.deactivate()
+  }
+})

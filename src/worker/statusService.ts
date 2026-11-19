@@ -31,8 +31,9 @@ export interface StatusService {
   workspace(): WorkspaceRef | null
 }
 
+/** Plan identity across workspaces: the same relative path in two workspaces is two plans. */
 function planKey(status: AifStatus): string | null {
-  return 'plan' in status && status.plan ? status.plan.path : null
+  return 'plan' in status && status.plan ? `${status.workspace.id}|${status.plan.path}` : null
 }
 
 export function createStatusService(deps: StatusServiceDeps): StatusService {
@@ -90,7 +91,11 @@ export function createStatusService(deps: StatusServiceDeps): StatusService {
     } catch (error) {
       log.warn('status', 'status bar not updated', { error: messageOf(error) })
     }
-    deps.post(next)
+    try {
+      deps.post(next)
+    } catch (error) {
+      log.warn('status', '[FIX:post] status not posted to panels', { error: messageOf(error) })
+    }
     try {
       await deps.storage.set(LAST_STATUS_KEY, next as never)
     } catch (error) {
@@ -98,6 +103,9 @@ export function createStatusService(deps: StatusServiceDeps): StatusService {
     }
 
     const finished = previous.kind === 'in-progress' && next.kind === 'done' && planKey(previous) === planKey(next)
+    if (previous.kind === 'in-progress' && next.kind === 'done' && !finished) {
+      log.debug('status', '[FIX:plan-key] done status of another plan or workspace; no notification', { plan: planKey(next) })
+    }
     if (finished && deps.notifyOnPlanDone() && next.kind === 'done' && next.plan) {
       const t = texts(deps.locale)
       try {
@@ -132,10 +140,13 @@ export function createStatusService(deps: StatusServiceDeps): StatusService {
       return running
     }
     if (!queued) {
-      queued = running.then(() => {
+      // Runs after the current refresh whether it resolved or rejected, so one failure never
+      // leaves a stale rejected promise behind.
+      const followUp = (): Promise<AifStatus> => {
         queued = null
         return refresh(reason)
-      })
+      }
+      queued = running.then(followUp, followUp)
     }
     return queued
   }
