@@ -1,0 +1,57 @@
+// Panel state as pure reducers. Argument field text lives outside the state (main.ts) so typing
+// never re-renders the panel.
+import type { AifCommandId, AifStatus } from '../core/types.ts'
+import type { CommandAction, PanelAgent, PanelCommand } from '../protocol.ts'
+
+export interface Notice {
+  kind: 'ok' | 'error'
+  /** Already-localized lead, e.g. "Sent". */
+  lead: string
+  detail: string
+}
+
+export interface PanelState {
+  loading: boolean
+  status: AifStatus | null
+  commands: PanelCommand[]
+  agents: PanelAgent[]
+  pending: AifCommandId | null
+  notice: Notice | null
+}
+
+export const INITIAL_STATE: PanelState = {
+  loading: true,
+  status: null,
+  commands: [],
+  agents: [],
+  pending: null,
+  notice: null
+}
+
+export type Action =
+  | { type: 'loaded'; status: AifStatus; commands: PanelCommand[] }
+  | { type: 'status'; status: AifStatus }
+  | { type: 'agents'; agents: PanelAgent[] }
+  | { type: 'pending'; command: AifCommandId }
+  | { type: 'commandDone'; action: CommandAction; text: string; lead: string }
+  | { type: 'failed'; lead: string; message: string }
+  | { type: 'dismiss' }
+
+export function reduce(state: PanelState, action: Action): PanelState {
+  switch (action.type) {
+    case 'loaded':
+      return { ...state, loading: false, status: action.status, commands: action.commands }
+    case 'status':
+      return { ...state, loading: false, status: action.status }
+    case 'agents':
+      return { ...state, agents: action.agents }
+    case 'pending':
+      return { ...state, pending: action.command, notice: null }
+    case 'commandDone':
+      return { ...state, pending: null, notice: { kind: 'ok', lead: action.lead, detail: action.text } }
+    case 'failed':
+      return { ...state, loading: false, pending: null, notice: { kind: 'error', lead: action.lead, detail: action.message } }
+    case 'dismiss':
+      return { ...state, notice: null }
+  }
+}

@@ -1,0 +1,88 @@
+// Panel texts in English and Russian, picked by Orca's UI language (`orca.locale`).
+const EN = {
+  title: 'AI Factory',
+  loading: 'Loading…',
+  refresh: 'Refresh',
+  noWorkspace: 'Open a workspace to see its AI Factory status.',
+  remote: 'Remote workspace: AI Factory files are not read on remote hosts. Commands still work.',
+  notInstalled: 'AI Factory is not set up in this workspace.',
+  setUp: 'Set up with /aif',
+  errorTitle: 'Could not read AI Factory files',
+  ambiguous: 'Several plans match this branch. Run implement with one of them:',
+  noPlan: 'No active plan. Start one with the Plan command.',
+  context: 'Context',
+  plan: 'Plan',
+  roadmap: 'Roadmap',
+  commands: 'Commands',
+  agent: 'Agent',
+  noAgent: 'No agent in this workspace; commands start one.',
+  tasks: 'tasks',
+  milestones: 'milestones',
+  allDone: 'All tasks are done.',
+  next: 'Next',
+  missing: 'missing',
+  warnings: 'Warnings',
+  argRequired: 'required',
+  argOptional: 'optional',
+  sent: 'Sent',
+  launched: 'Started an agent with',
+  typed: 'Typed into the agent terminal',
+  failed: 'Failed',
+  artifacts: {
+    config: 'config.yaml',
+    description: 'Description',
+    architecture: 'Architecture',
+    roadmap: 'Roadmap',
+    rulesFile: 'Rules',
+    rules: 'Area rules'
+  },
+  states: { working: 'working', blocked: 'blocked', waiting: 'waiting', done: 'done' },
+  kinds: { fast: 'fast', full: 'full', ultra: 'ultra', fix: 'fix' }
+}
+
+export type PanelTexts = typeof EN
+
+const RU: PanelTexts = {
+  title: 'AI Factory',
+  loading: 'Загрузка…',
+  refresh: 'Обновить',
+  noWorkspace: 'Откройте workspace, чтобы увидеть статус AI Factory.',
+  remote: 'Удалённый workspace: файлы AI Factory на удалённых хостах не читаются. Команды работают.',
+  notInstalled: 'AI Factory не настроен в этом workspace.',
+  setUp: 'Настроить через /aif',
+  errorTitle: 'Не удалось прочитать файлы AI Factory',
+  ambiguous: 'Ветке подходит несколько планов. Запустите implement с одним из них:',
+  noPlan: 'Нет активного плана. Начните с команды Plan.',
+  context: 'Контекст',
+  plan: 'План',
+  roadmap: 'Roadmap',
+  commands: 'Команды',
+  agent: 'Агент',
+  noAgent: 'В workspace нет агента; команда запустит его.',
+  tasks: 'задач',
+  milestones: 'milestones',
+  allDone: 'Все задачи выполнены.',
+  next: 'Далее',
+  missing: 'нет',
+  warnings: 'Предупреждения',
+  argRequired: 'обязательно',
+  argOptional: 'необязательно',
+  sent: 'Отправлено',
+  launched: 'Запущен агент с',
+  typed: 'Вставлено в терминал агента',
+  failed: 'Ошибка',
+  artifacts: {
+    config: 'config.yaml',
+    description: 'Описание',
+    architecture: 'Архитектура',
+    roadmap: 'Roadmap',
+    rulesFile: 'Правила',
+    rules: 'Правила по областям'
+  },
+  states: { working: 'работает', blocked: 'ждёт разрешения', waiting: 'ожидает', done: 'готово' },
+  kinds: { fast: 'fast', full: 'full', ultra: 'ultra', fix: 'fix' }
+}
+
+export function panelTexts(locale: string | undefined): PanelTexts {
+  return locale?.toLowerCase().startsWith('ru') ? RU : EN
+}
