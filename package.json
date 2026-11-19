@@ -1,6 +1,6 @@
 {
   "name": "orca-aif",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "AI Factory plugin for Orca ADE. No dependencies: Orca loads the sources directly; these scripts are dev helpers.",
   "license": "MIT",
