@@ -1,0 +1,235 @@
+{
+  "manifestVersion": 2,
+  "id": "ai-factory",
+  "name": "AI Factory",
+  "version": "0.1.0",
+  "description": "AI Factory workflow in Orca: quick /aif commands for the workspace agent and live plan, roadmap and setup status in the status bar and the right sidebar.",
+  "engines": {
+    "orca": ">=1.4.259"
+  },
+  "execution": "trusted-worker",
+  "pluginApi": 1,
+  "main": "src/worker.ts",
+  "contributes": {
+    "panels": [
+      {
+        "id": "aif",
+        "title": "AI Factory",
+        "icon": "rocket",
+        "entry": "panel/index.html"
+      }
+    ],
+    "commands": [
+      {
+        "id": "aif.summary",
+        "title": "AI Factory: Show status"
+      },
+      {
+        "id": "aif.refresh",
+        "title": "AI Factory: Refresh status"
+      },
+      {
+        "id": "aif.toggleSidebar",
+        "title": "AI Factory: Show or hide the right sidebar",
+        "action": "sidebar.right.toggle"
+      },
+      {
+        "id": "aif.run.setup",
+        "title": "AI Factory: Set up project (/aif)",
+        "when": "workspace"
+      },
+      {
+        "id": "aif.run.warmup",
+        "title": "AI Factory: Warm up session",
+        "when": "workspace"
+      },
+      {
+        "id": "aif.run.explore",
+        "title": "AI Factory: Explore",
+        "when": "workspace"
+      },
+      {
+        "id": "aif.run.roadmap",
+        "title": "AI Factory: Roadmap",
+        "when": "workspace"
+      },
+      {
+        "id": "aif.run.plan",
+        "title": "AI Factory: Plan…",
+        "when": "workspace"
+      },
+      {
+        "id": "aif.run.improve",
+        "title": "AI Factory: Improve plan",
+        "when": "workspace"
+      },
+      {
+        "id": "aif.run.implement",
+        "title": "AI Factory: Implement",
+        "when": "workspace"
+      },
+      {
+        "id": "aif.run.verify",
+        "title": "AI Factory: Verify",
+        "when": "workspace"
+      },
+      {
+        "id": "aif.run.review",
+        "title": "AI Factory: Review",
+        "when": "workspace"
+      },
+      {
+        "id": "aif.run.commit",
+        "title": "AI Factory: Commit",
+        "when": "workspace"
+      },
+      {
+        "id": "aif.run.fix",
+        "title": "AI Factory: Fix…",
+        "when": "workspace"
+      },
+      {
+        "id": "aif.run.docs",
+        "title": "AI Factory: Docs",
+        "when": "workspace"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "aif.run.implement",
+        "key": "Mod+Alt+I",
+        "when": "workspace"
+      },
+      {
+        "command": "aif.summary",
+        "key": "Mod+Alt+A"
+      }
+    ],
+    "statusBarItems": [
+      {
+        "id": "status",
+        "text": "AIF",
+        "icon": "rocket",
+        "tooltip": "AI Factory",
+        "command": "aif.summary"
+      }
+    ],
+    "events": [
+      {
+        "on": "workspace.changed"
+      },
+      {
+        "on": "agent.status.changed"
+      }
+    ],
+    "settings": [
+      {
+        "key": "defaultAgent",
+        "title": "Agent to start when the workspace has none",
+        "description": "Agent id Orca starts for a command when no agent runs in the workspace, for example claude or codex.",
+        "type": "string",
+        "default": "claude"
+      },
+      {
+        "key": "sendMode",
+        "title": "Where commands go",
+        "description": "Send to the agent already running in the workspace, or always start a new agent.",
+        "type": "string",
+        "enum": [
+          "agent-or-launch",
+          "always-launch"
+        ],
+        "enumLabels": [
+          "Running agent, else start one",
+          "Always start a new agent"
+        ],
+        "default": "agent-or-launch"
+      },
+      {
+        "key": "commandPrefix",
+        "title": "Command prefix",
+        "description": "/aif-… for Claude Code and slash agents, $aif-… for Codex. Auto picks by the agent.",
+        "type": "string",
+        "enum": [
+          "auto",
+          "/",
+          "$"
+        ],
+        "enumLabels": [
+          "Auto (by agent)",
+          "/ (slash)",
+          "$ (Codex)"
+        ],
+        "default": "auto"
+      },
+      {
+        "key": "panelCommands",
+        "title": "Commands in the panel",
+        "description": "Comma-separated command ids shown as buttons in the panel, in order.",
+        "type": "string",
+        "default": "plan, implement, verify, review, commit, fix, roadmap, explore"
+      },
+      {
+        "key": "pollIntervalSec",
+        "title": "Check for changes every (seconds)",
+        "description": "How often the plugin looks at .ai-factory/ files for changes.",
+        "type": "integer",
+        "default": 3,
+        "minimum": 1,
+        "maximum": 60
+      },
+      {
+        "key": "notifyOnPlanDone",
+        "title": "Notify when a plan is done",
+        "description": "Show a desktop notification when every task of the active plan is checked.",
+        "type": "boolean",
+        "default": true
+      },
+      {
+        "key": "logLevel",
+        "title": "Log level",
+        "description": "Detail of the plugin's log (orca plugin logs).",
+        "type": "string",
+        "enum": [
+          "debug",
+          "info",
+          "warn",
+          "error"
+        ],
+        "enumLabels": [
+          "Debug",
+          "Info",
+          "Warn",
+          "Error"
+        ],
+        "default": "info"
+      }
+    ]
+  },
+  "capabilities": [
+    {
+      "kind": "workspace:read"
+    },
+    {
+      "kind": "workspace:write"
+    },
+    {
+      "kind": "agent:read"
+    },
+    {
+      "kind": "agent:launch"
+    },
+    {
+      "kind": "terminal:send"
+    },
+    {
+      "kind": "storage:own"
+    },
+    {
+      "kind": "settings:own"
+    },
+    {
+      "kind": "notifications:show"
+    }
+  ]
+}
