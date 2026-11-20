@@ -9,6 +9,7 @@ import type { Outcome, PanelCommand } from './protocol.ts'
 import { createCommandService, pickAgent } from './worker/commandService.ts'
 import { createLogger, messageOf, type Logger } from './worker/log.ts'
 import { createOrcaHost } from './worker/orcaHost.ts'
+import { openOwnPanel, pluginKeyFromLocation, runOrcaCli } from './worker/orcaCli.ts'
 import { DEFAULT_SETTINGS, parseSettings, type Settings } from './worker/settings.ts'
 import { createStatusService } from './worker/statusService.ts'
 import { createWatcher, type Watcher } from './worker/watcher.ts'
@@ -148,15 +149,23 @@ export default function activate(orca: OrcaWorkerApi): void {
   }
 
   // Palette commands.
-  // Orca shows a command's string result only when it runs from the palette; a status bar click
-  // discards it, so the click toggles the right sidebar where the AI Factory panel lives.
+  // Orca shows a command's string result only when it runs from the palette, so a status bar click
+  // shows the AI Factory panel tab itself. The host API cannot pick a sidebar tab; the `orca` CLI
+  // can (`plugin open --panel`). If the CLI fails, fall back to toggling the right sidebar.
+  const pluginKey = pluginKeyFromLocation(import.meta.url)
   disposables.push(
     orca.commands.register('aif.statusClick', async () => {
-      log.info('command', '[FIX:status-click] status bar clicked; toggling the right sidebar')
+      log.info('command', '[FIX:status-click] status bar clicked; showing the panel', { pluginKey })
       try {
-        await host.runAction('sidebar.right.toggle')
+        if (process.env.AIF_DISABLE_CLI === '1') throw new Error('CLI disabled')
+        await openOwnPanel(runOrcaCli, pluginKey)
       } catch (error) {
-        log.warn('command', '[FIX:status-click] could not toggle the sidebar', { error: messageOf(error) })
+        log.warn('command', '[FIX:status-click] orca plugin open failed; toggling the sidebar', { error: messageOf(error) })
+        try {
+          await host.runAction('sidebar.right.toggle')
+        } catch (toggleError) {
+          log.warn('command', '[FIX:status-click] could not toggle the sidebar', { error: messageOf(toggleError) })
+        }
       }
       return summaryOf(await refresh('command:status-click'), locale)
     })

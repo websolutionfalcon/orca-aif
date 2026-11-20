@@ -39,3 +39,22 @@ declare module 'node:path' {
 declare module 'node:os' {
   export function tmpdir(): string
 }
+
+declare module 'node:child_process' {
+  export function execFile(
+    file: string,
+    args: readonly string[],
+    options: { timeout?: number },
+    callback: (error: Error | null, stdout: string, stderr: string) => void
+  ): unknown
+}
+
+declare module 'node:fs' {
+  export function existsSync(path: string): boolean
+}
+
+declare const process: {
+  readonly resourcesPath?: string
+  readonly execPath: string
+  readonly env: Record<string, string | undefined>
+}

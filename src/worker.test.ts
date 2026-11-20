@@ -5,6 +5,9 @@ import { join } from 'node:path'
 import { afterEach, assert, beforeEach, mockHost, mountWorker, test } from 'orca/testing'
 import * as main from './worker.ts'
 
+// Never drive the real Orca app from tests: the status bar click falls back to the host API.
+process.env.AIF_DISABLE_CLI = '1'
+
 let root = ''
 
 beforeEach(async () => {
@@ -148,7 +151,7 @@ test('always-launch labels buttons with the default agent prefix, not the runnin
   }
 })
 
-test('regression: clicking the status bar item opens the right sidebar instead of silently returning text', async () => {
+test('status bar click falls back to toggling the right sidebar when the CLI is unavailable', async () => {
   const worker = await mountWorker(main, { host: host() })
   try {
     await worker.command('aif.statusClick')
