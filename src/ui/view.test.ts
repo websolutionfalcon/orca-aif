@@ -3,7 +3,7 @@ import type { AifStatus, ReadyStatus } from '../core/types.ts'
 import type { PanelCommand } from '../protocol.ts'
 import { byClass, byKey, findAll, textOf } from './dom.ts'
 import { panelTexts } from './i18n.ts'
-import { INITIAL_STATE, type PanelState } from './state.ts'
+import { DEFAULT_COLLAPSED, INITIAL_STATE, type PanelState } from './state.ts'
 import { view, type ViewHandlers } from './view.ts'
 
 const workspace = { id: 'w1', name: 'repo', branch: 'feature/auth', path: '/r', hostId: 'local' }
@@ -71,7 +71,7 @@ function handlers(): ViewHandlers & { opened: string[]; ran: string[]; drafted: 
     open: (path) => opened.push(path),
     dismiss: () => undefined,
     toggleDone: () => undefined,
-    toggleContext: () => undefined,
+    toggleCard: () => undefined,
     skillsSearch: () => undefined,
     toggleSkills: () => undefined,
     argInput: () => undefined,
@@ -121,7 +121,7 @@ test('plan shows progress, phases, next task and commit task', () => {
 
 test('artifacts link existing files, the missing one is plain text', () => {
   const h = handlers()
-  const tree = view(state({ kind: 'in-progress', ...ready }, { contextOpen: true }), en, h)
+  const tree = view(state({ kind: 'in-progress', ...ready }, { collapsed: { ...DEFAULT_COLLAPSED, context: false } }), en, h)
   const links = findAll(tree, byClass('link'))
   links.find((link) => link.attrs.title === '.ai-factory/config.yaml')?.on.click(new Event('click'))
   assert.deepEqual(h.opened, ['.ai-factory/config.yaml'])
@@ -190,7 +190,7 @@ describe('skills library', () => {
   test('collapsed by default with a search field and the total', () => {
     const tree = view(state({ kind: 'in-progress', ...ready }), en, handlers())
     assert.equal(findAll(tree, byKey('skills:search')).length, 1)
-    assert.match(textOf(findAll(tree, byKey('skills:toggle'))[0]), /▸ All skills \(3\)/)
+    assert.match(textOf(findAll(tree, byKey('skills:list'))[0]), /▸ All skills \(3\)/)
     assert.deepEqual(skillNames(tree), [])
   })
 
@@ -202,7 +202,7 @@ describe('skills library', () => {
   test('a query unfolds the list and matches names and descriptions', () => {
     const byName = view(state({ kind: 'in-progress', ...ready }, { skillsQuery: 'plan' }), en, handlers())
     assert.deepEqual(skillNames(byName), ['aif-plan'])
-    assert.match(textOf(findAll(byName, byKey('skills:toggle'))[0]), /Found: 1 \/ 3/)
+    assert.match(textOf(findAll(byName, byKey('skills:list'))[0]), /Found: 1 \/ 3/)
     const byDescription = view(state({ kind: 'in-progress', ...ready }, { skillsQuery: 'STAGED changes' }), en, handlers())
     assert.deepEqual(skillNames(byDescription), ['aif-commit', 'aif-review'])
     const none = view(state({ kind: 'in-progress', ...ready }, { skillsQuery: 'kubernetes' }), panelTexts('ru'), handlers())
@@ -231,21 +231,21 @@ test('the plan mode is a badge next to the Plan heading, not beside the title', 
   const tree = view(state({ kind: 'in-progress', ...ready }), en, handlers())
   const badge = findAll(tree, byKey('badge:plan'))[0]
   assert.equal(textOf(badge), 'full')
-  const head = findAll(tree, byClass('card-title'))[0]
-  assert.match(textOf(head), /^Plan full$/)
+  const head = findAll(tree, byKey('plan:toggle'))[0]
+  assert.match(textOf(head), /^▾ Plan full$/)
   const titleRow = findAll(tree, byClass('row')).find((row) => textOf(row).includes('Auth plan'))
   assert.equal(textOf(titleRow!), 'Auth plan')
 })
 
 test('missing context artifacts get a button that runs their command in the agent', () => {
   const h = handlers()
-  const tree = view(state({ kind: 'in-progress', ...ready }, { contextOpen: true }), en, h)
+  const tree = view(state({ kind: 'in-progress', ...ready }, { collapsed: { ...DEFAULT_COLLAPSED, context: false } }), en, h)
   const fix = findAll(tree, byKey('fix:architecture'))[0]
   assert.equal(textOf(fix), '▶ /aif-architecture')
   assert.equal(findAll(tree, byKey('fix:config')).length, 0, 'present artifacts get no button')
   fix.on.click(new Event('click'))
   assert.deepEqual(h.ran, ['architecture'])
-  const busy = view(state({ kind: 'in-progress', ...ready }, { pending: 'architecture', contextOpen: true }), en, h)
+  const busy = view(state({ kind: 'in-progress', ...ready }, { pending: 'architecture', collapsed: { ...DEFAULT_COLLAPSED, context: false } }), en, h)
   assert.equal(findAll(busy, byKey('fix:architecture'))[0].attrs.disabled, '')
 })
 
@@ -288,11 +288,11 @@ describe('context card', () => {
   })
 
   test('the header toggles it open', () => {
-    let toggled = 0
-    const h = { ...handlers(), toggleContext: () => void toggled++ }
+    const toggled: string[] = []
+    const h = { ...handlers(), toggleCard: (key: string) => void toggled.push(key) }
     findAll(view(state({ kind: 'in-progress', ...ready }), en, h), byKey('context:toggle'))[0].on.click(new Event('click'))
-    assert.equal(toggled, 1)
-    const open = view(state({ kind: 'in-progress', ...ready }, { contextOpen: true }), en, handlers())
+    assert.deepEqual(toggled, ['context'])
+    const open = view(state({ kind: 'in-progress', ...ready }, { collapsed: { ...DEFAULT_COLLAPSED, context: false } }), en, handlers())
     assert.equal(findAll(open, byClass('artifacts')).length, 1)
     assert.equal(findAll(open, byKey('context:toggle'))[0].attrs['aria-expanded'], 'true')
   })
@@ -317,4 +317,36 @@ test('the header has an Explore icon left of Refresh that drafts /aif-explore', 
   assert.deepEqual(h.drafted, ['explore'])
   assert.equal(findAll(view(state({ kind: 'not-installed', workspace }), en, h), byKey('explore')).length, 0)
   assert.equal(findAll(view(state({ kind: 'in-progress', ...ready }, { pending: 'plan' }), en, h), byKey('explore'))[0].attrs.disabled, '')
+})
+
+describe('foldable cards', () => {
+  const folded = (keys: string[]) => ({ collapsed: { ...DEFAULT_COLLAPSED, ...Object.fromEntries(keys.map((key) => [key, true])) } })
+
+  test('plan, roadmap and skills start open; context starts folded', () => {
+    const tree = view(state({ kind: 'in-progress', ...ready }), en, handlers())
+    for (const key of ['plan', 'roadmap', 'skills']) assert.equal(findAll(tree, byKey(`${key}:toggle`))[0].attrs['aria-expanded'], 'true')
+    assert.equal(findAll(tree, byKey('context:toggle'))[0].attrs['aria-expanded'], 'false')
+  })
+
+  test('folded plan and roadmap hide their body but keep the badge, New and a progress count', () => {
+    const tree = view(state({ kind: 'in-progress', ...ready }, folded(['plan', 'roadmap'])), en, handlers())
+    assert.equal(findAll(tree, byClass('tasks')).length, 0)
+    assert.equal(findAll(tree, byClass('milestones')).length, 0)
+    assert.equal(textOf(findAll(tree, byKey('badge:plan'))[0]), 'full')
+    assert.equal(findAll(tree, byKey('new:plan')).length, 1)
+    assert.match(textOf(findAll(tree, byKey('plan:toggle'))[0]), /1\/3/)
+    assert.match(textOf(findAll(tree, byKey('roadmap:toggle'))[0]), /0\/1/)
+  })
+
+  test('folded skills hide the search and show the count', () => {
+    const tree = view(state({ kind: 'in-progress', ...ready }, folded(['skills'])), en, handlers())
+    assert.equal(findAll(tree, byKey('skills:search')).length, 0)
+    assert.match(textOf(findAll(tree, byKey('skills:toggle'))[0]), /Skills library 3/)
+  })
+
+  test('the New button sits outside the toggle, so it does not fold the card', () => {
+    const tree = view(state({ kind: 'in-progress', ...ready }), en, handlers())
+    const toggle = findAll(tree, byKey('plan:toggle'))[0]
+    assert.equal(findAll(toggle, byKey('new:plan')).length, 0)
+  })
 })

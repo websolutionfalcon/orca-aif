@@ -24,8 +24,23 @@ export interface PanelState {
   skillsOpen: boolean
   /** A manual refresh is running (the refresh icon spins). */
   refreshing: boolean
-  /** The Context card is unfolded (folded by default). */
-  contextOpen: boolean
+  /** Folded cards; the Context card starts folded, the others open. */
+  collapsed: Record<CardKey, boolean>
+}
+
+export type CardKey = 'plan' | 'roadmap' | 'context' | 'skills'
+
+export const DEFAULT_COLLAPSED: Record<CardKey, boolean> = { plan: false, roadmap: false, context: true, skills: false }
+
+/** Folded-card preferences read back from storage; anything unexpected keeps the default. */
+export function collapsedFrom(saved: unknown): Record<CardKey, boolean> {
+  const result = { ...DEFAULT_COLLAPSED }
+  if (!saved || typeof saved !== 'object') return result
+  for (const key of Object.keys(result) as CardKey[]) {
+    const value = (saved as Record<string, unknown>)[key]
+    if (typeof value === 'boolean') result[key] = value
+  }
+  return result
 }
 
 export const INITIAL_STATE: PanelState = {
@@ -38,7 +53,7 @@ export const INITIAL_STATE: PanelState = {
   skillsQuery: '',
   skillsOpen: false,
   refreshing: false,
-  contextOpen: false
+  collapsed: { ...DEFAULT_COLLAPSED }
 }
 
 export type Action =
@@ -52,7 +67,8 @@ export type Action =
   | { type: 'skillsQuery'; query: string }
   | { type: 'toggleSkills' }
   | { type: 'refreshing' }
-  | { type: 'toggleContext' }
+  | { type: 'toggleCard'; key: CardKey }
+  | { type: 'restoreCollapsed'; collapsed: unknown }
 
 export function reduce(state: PanelState, action: Action): PanelState {
   switch (action.type) {
@@ -62,8 +78,10 @@ export function reduce(state: PanelState, action: Action): PanelState {
       return { ...state, loading: false, refreshing: false, status: action.status }
     case 'refreshing':
       return { ...state, refreshing: true }
-    case 'toggleContext':
-      return { ...state, contextOpen: !state.contextOpen }
+    case 'toggleCard':
+      return { ...state, collapsed: { ...state.collapsed, [action.key]: !state.collapsed[action.key] } }
+    case 'restoreCollapsed':
+      return { ...state, collapsed: collapsedFrom(action.collapsed) }
     case 'pending':
       return { ...state, pending: action.command, notice: null }
     case 'commandDone':

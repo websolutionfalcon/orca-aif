@@ -4,7 +4,7 @@ import type { PanelCommand } from '../protocol.ts'
 import { h, type VNode } from './dom.ts'
 import { filterSkills } from './skills.ts'
 import type { PanelTexts } from './i18n.ts'
-import type { PanelState } from './state.ts'
+import type { CardKey, PanelState } from './state.ts'
 
 export interface ViewHandlers {
   refresh(): void
@@ -12,7 +12,7 @@ export interface ViewHandlers {
   open(path: string): void
   dismiss(): void
   toggleDone(): void
-  toggleContext(): void
+  toggleCard(key: CardKey): void
   /** Types the command (and an optional argument) without Enter, for the user's own prompt. */
   draft(command: PanelCommand, argument?: string): void
   skillsSearch(query: string): void
@@ -28,27 +28,37 @@ function card(title: string, ...children: (VNode | string | null | false)[]): VN
 }
 
 /** A card whose heading carries a small badge (the plan mode). */
-/** A card whose heading carries an optional badge (the plan mode) and an optional New button. */
-function headedCard(
+/** A foldable card: the chevron and title toggle it; badge, mark and action sit in the header. */
+function foldCard(
+  key: CardKey,
   title: string,
-  head: { key: string; badge?: string; action?: VNode | null },
+  head: { badge?: string; mark?: VNode | null; action?: VNode | null; tip?: string },
+  state: PanelState,
+  handlers: ViewHandlers,
   ...children: (VNode | string | null | false)[]
 ): VNode {
+  const open = !state.collapsed[key]
   return h(
     'section',
-    { class: 'card' },
+    { class: `card${open ? '' : ' folded'}` },
     h(
       'div',
       { class: 'card-head' },
       h(
-        'div',
-        { class: 'card-title' },
+        'button',
+        {
+          class: 'card-toggle',
+          attrs: { type: 'button', 'data-key': `${key}:toggle`, 'aria-expanded': open ? 'true' : 'false', title: head.tip },
+          on: { click: () => handlers.toggleCard(key) }
+        },
+        h('span', { class: 'chevron', attrs: { 'aria-hidden': 'true' } }, open ? '▾' : '▸'),
         h('h2', null, title),
-        head.badge ? h('span', { class: 'badge', attrs: { 'data-key': `badge:${head.key}` } }, head.badge) : null
+        head.badge ? h('span', { class: 'badge', attrs: { 'data-key': `badge:${key}` } }, head.badge) : null,
+        head.mark ?? null
       ),
       head.action ?? null
     ),
-    ...children
+    ...(open ? children : [])
   )
 }
 
@@ -163,30 +173,18 @@ function contextCard(status: Ready, state: PanelState, t: PanelTexts, handlers: 
   const present = status.artifacts.filter((artifact) => artifact.exists).length
   const total = status.artifacts.length
   const complete = total > 0 && present === total
-  const open = state.contextOpen
-  return h(
-    'section',
-    { class: 'card' },
+  return foldCard(
+    'context',
+    t.context,
+    {
+      tip: complete ? t.contextComplete : `${t.contextMissing}: ${total - present}`,
+      mark: complete
+        ? h('span', { class: 'ok-mark', attrs: { 'data-key': 'context:complete', 'aria-label': t.contextComplete } }, '✓')
+        : h('span', { class: 'count-mark', attrs: { 'data-key': 'context:count' } }, `${present}/${total}`)
+    },
+    state,
+    handlers,
     h(
-      'button',
-      {
-        class: 'card-head card-toggle',
-        attrs: { type: 'button', 'data-key': 'context:toggle', 'aria-expanded': open ? 'true' : 'false', title: complete ? t.contextComplete : `${t.contextMissing}: ${total - present}` },
-        on: { click: () => handlers.toggleContext() }
-      },
-      h(
-        'span',
-        { class: 'card-title' },
-        h('span', { class: 'chevron', attrs: { 'aria-hidden': 'true' } }, open ? '▾' : '▸'),
-        h('h2', null, t.context),
-        complete
-          ? h('span', { class: 'ok-mark', attrs: { 'data-key': 'context:complete', 'aria-label': t.contextComplete } }, '✓')
-          : h('span', { class: 'count-mark', attrs: { 'data-key': 'context:count' } }, `${present}/${total}`)
-      )
-    ),
-    !open
-      ? null
-      : h(
       'ul',
       { class: 'artifacts' },
       status.artifacts.map((artifact) =>
@@ -263,18 +261,24 @@ function taskList(plan: PlanInfo, state: PanelState, t: PanelTexts, handlers: Vi
 function planCard(status: Ready, state: PanelState, t: PanelTexts, handlers: ViewHandlers): VNode {
   const action = newButton('plan', state, t, handlers)
   if (status.kind === 'ambiguous') {
-    return headedCard(
+    return foldCard(
+      'plan',
       t.plan,
-      { key: 'plan', action },
+      { action },
+      state,
+      handlers,
       h('p', null, t.ambiguous),
       h('ul', { class: 'artifacts' }, status.candidates.map((path) => h('li', null, h('span', { class: 'mark' }, '•'), fileLink(path, path, handlers))))
     )
   }
   const plan = status.plan
-  if (!plan) return headedCard(t.plan, { key: 'plan', action }, h('p', { class: 'subtle' }, t.noPlan))
-  return headedCard(
+  if (!plan) return foldCard('plan', t.plan, { action }, state, handlers, h('p', { class: 'subtle' }, t.noPlan))
+  return foldCard(
+    'plan',
     t.plan,
-    { key: 'plan', badge: t.kinds[plan.kind], action },
+    { badge: t.kinds[plan.kind], action, mark: state.collapsed.plan ? h('span', { class: 'count-mark' }, `${plan.done}/${plan.total}`) : null },
+    state,
+    handlers,
     h('div', { class: 'row' }, fileLink(plan.path, plainText(plan.title ?? plan.path), handlers)),
     progress(plan.done, plan.total),
     h('div', { class: 'subtle' }, status.kind === 'done' ? t.allDone : `${plan.done}/${plan.total} ${t.tasks}`),
@@ -286,9 +290,15 @@ function roadmapCard(status: Ready, state: PanelState, t: PanelTexts, handlers: 
   const roadmap = status.roadmap
   if (!roadmap || roadmap.total === 0) return null
   const plan = state.commands.find((command) => command.id === 'plan')
-  return headedCard(
+  return foldCard(
+    'roadmap',
     t.roadmap,
-    { key: 'roadmap', action: newButton('roadmap', state, t, handlers) },
+    {
+      action: newButton('roadmap', state, t, handlers),
+      mark: state.collapsed.roadmap ? h('span', { class: 'count-mark' }, `${roadmap.done}/${roadmap.total}`) : null
+    },
+    state,
+    handlers,
     h('div', { class: 'row' }, fileLink(roadmap.path, `${roadmap.done}/${roadmap.total} ${t.milestones}`, handlers)),
     progress(roadmap.done, roadmap.total),
     h(
@@ -375,8 +385,12 @@ function skillsCard(status: Ready, state: PanelState, t: PanelTexts, handlers: V
   const found = filterSkills(all, query)
   const open = query !== '' || state.skillsOpen
   const summary = query !== '' ? `${t.skillsFound}: ${found.length} / ${all.length}` : `${t.skillsAll} (${all.length})`
-  return card(
+  return foldCard(
+    'skills',
     t.skills,
+    { mark: state.collapsed.skills ? h('span', { class: 'count-mark' }, String(all.length)) : null },
+    state,
+    handlers,
     h('input', {
       class: 'search',
       attrs: { type: 'search', 'data-key': 'skills:search', value: state.skillsQuery, placeholder: t.skillsSearch, 'aria-label': t.skillsSearch, maxlength: 200 },
@@ -391,7 +405,7 @@ function skillsCard(status: Ready, state: PanelState, t: PanelTexts, handlers: V
       'button',
       {
         class: 'link subtle spoiler',
-        attrs: { type: 'button', 'data-key': 'skills:toggle', 'aria-expanded': open ? 'true' : 'false', disabled: query !== '' },
+        attrs: { type: 'button', 'data-key': 'skills:list', 'aria-expanded': open ? 'true' : 'false', disabled: query !== '' },
         on: { click: () => handlers.toggleSkills() }
       },
       `${open ? '▾' : '▸'} ${summary}`

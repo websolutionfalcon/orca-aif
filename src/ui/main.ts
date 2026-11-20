@@ -3,7 +3,9 @@ import type { PanelCommand } from '../protocol.ts'
 import { render } from './dom.ts'
 import { commandRunInput } from './requests.ts'
 import { panelTexts } from './i18n.ts'
-import { INITIAL_STATE, reduce, type Action, type PanelState } from './state.ts'
+import { INITIAL_STATE, reduce, type Action, type CardKey, type PanelState } from './state.ts'
+
+const COLLAPSED_KEY = 'ui:collapsed'
 import { view } from './view.ts'
 
 const t = panelTexts(orca.locale)
@@ -38,6 +40,11 @@ function dispatch(action: Action): void {
 }
 
 async function load(): Promise<void> {
+  try {
+    dispatch({ type: 'restoreCollapsed', collapsed: await orca.storage.get(COLLAPSED_KEY) })
+  } catch {
+    // Defaults stay.
+  }
   try {
     const answer = await orca.plugin.request('status.get')
     if (answer.ok) dispatch({ type: 'loaded', status: answer.status, commands: answer.commands })
@@ -101,8 +108,10 @@ const handlers = {
   toggleDone(): void {
     dispatch({ type: 'toggleDone' })
   },
-  toggleContext(): void {
-    dispatch({ type: 'toggleContext' })
+  toggleCard(key: CardKey): void {
+    dispatch({ type: 'toggleCard', key })
+    // Remember folded cards across panel reloads; storage is a convenience, so failures are ignored.
+    void orca.storage.set(COLLAPSED_KEY, state.collapsed).catch(() => undefined)
   },
   skillsSearch(query: string): void {
     dispatch({ type: 'skillsQuery', query })

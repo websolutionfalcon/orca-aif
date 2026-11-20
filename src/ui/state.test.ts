@@ -1,5 +1,5 @@
 import { assert, test } from 'orca/testing'
-import { INITIAL_STATE, reduce } from './state.ts'
+import { collapsedFrom, DEFAULT_COLLAPSED, INITIAL_STATE, reduce } from './state.ts'
 
 test('loaded, pending, done and failure', () => {
   let state = reduce(INITIAL_STATE, { type: 'loaded', status: { kind: 'no-workspace' }, commands: [] })
@@ -37,4 +37,13 @@ test('refreshing ends when a status or a failure arrives', () => {
   assert.equal(busy.refreshing, true)
   assert.equal(reduce(busy, { type: 'status', status: { kind: 'no-workspace' } }).refreshing, false)
   assert.equal(reduce(busy, { type: 'failed', lead: 'x', message: 'y' }).refreshing, false)
+})
+
+test('cards fold and unfold; saved preferences are validated', () => {
+  const folded = reduce(INITIAL_STATE, { type: 'toggleCard', key: 'plan' })
+  assert.equal(folded.collapsed.plan, true)
+  assert.equal(reduce(folded, { type: 'toggleCard', key: 'plan' }).collapsed.plan, false)
+  assert.deepEqual(collapsedFrom({ plan: true, skills: 'yes', other: true }), { ...DEFAULT_COLLAPSED, plan: true })
+  assert.deepEqual(collapsedFrom(null), DEFAULT_COLLAPSED)
+  assert.equal(reduce(INITIAL_STATE, { type: 'restoreCollapsed', collapsed: { context: false } }).collapsed.context, false)
 })
