@@ -46,18 +46,22 @@ const ready: ReadyStatus = {
   warnings: ['plan too large']
 }
 const commands: PanelCommand[] = [
+  { id: 'roadmap', label: '/aif-roadmap', title: 'Roadmap', arg: 'optional', argHint: '' },
   { id: 'plan', label: '/aif-plan', title: 'Plan', arg: 'required', argHint: 'description' },
   { id: 'commit', label: '/aif-commit', title: 'Commit', arg: 'none', argHint: '' },
   { id: 'architecture', label: '/aif-architecture', title: 'Architecture', arg: 'optional', argHint: '' },
   { id: 'rules', label: '/aif-rules', title: 'Rules', arg: 'optional', argHint: '' }
 ]
 
-function handlers(): ViewHandlers & { opened: string[]; ran: string[] } {
+function handlers(): ViewHandlers & { opened: string[]; ran: string[]; drafted: string[] } {
   const opened: string[] = []
   const ran: string[] = []
+  const drafted: string[] = []
   return {
     opened,
     ran,
+    drafted,
+    draft: (command) => drafted.push(command.id),
     refresh: () => undefined,
     run: (command) => ran.push(command.id),
     open: (path) => opened.push(path),
@@ -238,4 +242,25 @@ test('missing context artifacts get a button that runs their command in the agen
   assert.deepEqual(h.ran, ['architecture'])
   const busy = view(state({ kind: 'in-progress', ...ready }, { pending: 'architecture' }), en, h)
   assert.equal(findAll(busy, byKey('fix:architecture'))[0].attrs.disabled, '')
+})
+
+describe('New buttons', () => {
+  test('plan and roadmap headers have New, which drafts the command instead of running it', () => {
+    const h = handlers()
+    const tree = view(state({ kind: 'in-progress', ...ready }), en, h)
+    const plan = findAll(tree, byKey('new:plan'))[0]
+    const roadmap = findAll(tree, byKey('new:roadmap'))[0]
+    assert.equal(textOf(plan), '+ New')
+    plan.on.click(new Event('click'))
+    roadmap.on.click(new Event('click'))
+    assert.deepEqual(h.drafted, ['plan', 'roadmap'])
+    assert.deepEqual(h.ran, [])
+  })
+
+  test('the plan card offers New even without a plan, and New is disabled while a command is sent', () => {
+    const empty = view(state({ kind: 'no-plan', ...ready, plan: null }), panelTexts('ru'), handlers())
+    assert.equal(textOf(findAll(empty, byKey('new:plan'))[0]), '+ Новый')
+    const busy = view(state({ kind: 'in-progress', ...ready }, { pending: 'plan' }), en, handlers())
+    assert.equal(findAll(busy, byKey('new:plan'))[0].attrs.disabled, '')
+  })
 })

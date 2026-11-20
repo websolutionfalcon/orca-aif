@@ -2,7 +2,11 @@
 // are left out rather than sent as `undefined` (which it refuses with `invalid_params`).
 import type { AifCommandId } from '../core/types.ts'
 
-export function commandRunInput(command: AifCommandId, rawArgument: string | undefined): { command: AifCommandId; argument?: string } {
+export function commandRunInput(
+  command: AifCommandId,
+  rawArgument: string | undefined,
+  draft = false
+): { command: AifCommandId; argument?: string; draft?: boolean } {
   const argument = rawArgument?.trim()
-  return argument ? { command, argument } : { command }
+  return { command, ...(argument && !draft ? { argument } : {}), ...(draft ? { draft: true } : {}) }
 }

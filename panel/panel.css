@@ -375,3 +375,20 @@ code {
   background: var(--orca-accent);
   color: var(--orca-accent-foreground);
 }
+
+.card-new {
+  flex: none;
+  border: 1px solid var(--orca-border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--orca-muted-foreground);
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.card-new:hover:not(:disabled),
+.card-new.busy {
+  background: var(--orca-accent);
+  color: var(--orca-accent-foreground);
+  border-color: transparent;
+}

@@ -176,3 +176,36 @@ describe('regressions (launch prompt lost)', () => {
     assert.match(calls.notes[0], /\/aif-rules/)
   })
 })
+
+describe('draft (New button)', () => {
+  test('running agent: types the command without Enter and shows the terminal', async () => {
+    const { service, calls } = setup([claude])
+    const result = await service.run({ command: 'plan', source: 'panel', draft: true })
+    assert.deepEqual(result, { ok: true, action: 'typed', terminalId: 't1', text: '/aif-plan ' })
+    assert.deepEqual(calls.sent, [{ terminalId: 't1', text: '/aif-plan ', enter: false }])
+    assert.deepEqual(calls.focused, ['t1'])
+  })
+
+  test('a typed argument is ignored in draft mode', async () => {
+    const { service, calls } = setup([codex])
+    await service.run({ command: 'roadmap', argument: 'check', source: 'panel', draft: true })
+    assert.deepEqual(calls.sent, [{ terminalId: 't2', text: '$aif-roadmap ', enter: false }])
+  })
+
+  test('no agent: launches one without a prompt, then types the draft without Enter once ready', async () => {
+    const { service, calls } = setup([], {}, true, async () => undefined)
+    const result = await service.run({ command: 'roadmap', source: 'panel', draft: true })
+    assert.deepEqual(result, { ok: true, action: 'launched', terminalId: 'term-new', text: '/aif-roadmap ' })
+    await service.settled()
+    assert.deepEqual(calls.launched, [{ workspaceId: 'w1', agent: 'claude', prompt: undefined }])
+    assert.deepEqual(calls.sent, [{ terminalId: 'term-new', text: '/aif-roadmap ', enter: false }])
+  })
+
+  test('no agent and no way to wait: never launches with the draft as a prompt (it would run)', async () => {
+    const { service, calls } = setup([])
+    await service.run({ command: 'plan', source: 'panel', draft: true })
+    await service.settled()
+    assert.deepEqual(calls.launched, [{ workspaceId: 'w1', agent: 'claude', prompt: undefined }])
+    assert.deepEqual(calls.sent, [])
+  })
+})

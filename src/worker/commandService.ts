@@ -17,6 +17,8 @@ export interface RunCommandInput {
   command: string
   argument?: unknown
   source: CommandSource
+  /** Type `/aif-x ` without Enter so the user writes the prompt (the panel's New buttons). */
+  draft?: boolean
 }
 
 export type RunCommandResult =
@@ -65,17 +67,17 @@ export function createCommandService(deps: CommandServiceDeps) {
   const deliveries = new Set<Promise<void>>()
 
   /** Types the command into a just-launched agent once it is idle; tells the user if it never is. */
-  function deliverWhenReady(workspaceId: string, terminalId: string, command: string, text: string): void {
+  function deliverWhenReady(workspaceId: string, terminalId: string, command: string, text: string, enter: boolean): void {
     const delivery = (async () => {
       try {
         await deps.waitForIdle!(terminalId)
-        const accepted = await host.sendText(terminalId, text, true)
+        const accepted = await host.sendText(terminalId, text, enter)
         if (!accepted) throw new Error('the agent terminal did not accept the text')
-        log.info('command', `[FIX:launch-prompt] ${command} delivered to the started agent`, { terminal: terminalId, length: text.length })
+        log.info('command', `[FIX:launch-prompt] ${command} delivered to the started agent`, { terminal: terminalId, length: text.length, enter })
       } catch (error) {
         log.warn('command', '[FIX:launch-prompt] command not delivered to the started agent', { command, terminal: terminalId, error: messageOf(error) })
         try {
-          await host.notify('AI Factory', `The agent did not get ready in time. Type ${text} in its terminal.`)
+          await host.notify('AI Factory', `The agent did not get ready in time. Type ${text.trim()} in its terminal.`)
         } catch (notifyError) {
           log.warn('command', 'notification failed', { error: messageOf(notifyError) })
         }
@@ -125,26 +127,27 @@ export function createCommandService(deps: CommandServiceDeps) {
       }
       const prefix = prefixFor(agent?.agent ?? settings.defaultAgent, settings.commandPrefix)
       const built = buildCommandText(command.id, prefix, input.argument)
+      const asDraft = input.draft === true
+      const draftText = `${prefix}${command.skill} `
 
       if (agent) {
-        if (built.ok) {
+        if (built.ok && !asDraft) {
           const accepted = await host.sendText(agent.terminalId, built.text, true)
           if (!accepted) return refuse(command.id, 'the agent terminal did not accept the text')
           log.info('command', `${command.id} -> sent`, { terminal: agent.terminalId, agent: agent.agent, length: built.text.length })
           return { ok: true, action: 'sent', terminalId: agent.terminalId, text: built.text }
         }
-        if (input.source === 'palette' && command.arg === 'required') {
-          const draft = `${prefix}${command.skill} `
-          const accepted = await host.sendText(agent.terminalId, draft, false)
+        if (asDraft || (input.source === 'palette' && command.arg === 'required')) {
+          const accepted = await host.sendText(agent.terminalId, draftText, false)
           if (!accepted) return refuse(command.id, 'the agent terminal did not accept the text')
-          const focused = await host.focusTerminal(agent.terminalId).catch(() => false)
-          log.info('command', `${command.id} -> typed`, { terminal: agent.terminalId, focused })
-          return { ok: true, action: 'typed', terminalId: agent.terminalId, text: draft }
+          const focused = await show(agent.terminalId)
+          log.info('command', `${command.id} -> typed`, { terminal: agent.terminalId, focused, draft: asDraft })
+          return { ok: true, action: 'typed', terminalId: agent.terminalId, text: draftText }
         }
-        return refuse(command.id, built.error)
+        return refuse(command.id, built.ok ? 'unexpected command state' : built.error)
       }
 
-      if (!built.ok) {
+      if (!built.ok && !asDraft) {
         const hint = input.source === 'palette' ? ' Enter it in the AI Factory panel, or start an agent first.' : ''
         return refuse(command.id, `${built.error}.${hint}`)
       }
@@ -156,13 +159,16 @@ export function createCommandService(deps: CommandServiceDeps) {
         log.info('command', '[FIX:double-launch] agent still starting; not launching another', { command: command.id, terminal: pending.terminalId })
         return refuse(command.id, 'an agent is still starting in this workspace; wait until it is ready, then run the command again')
       }
-      const typeLater = Boolean(deps.waitForIdle)
-      const terminalId = await host.launchAgent(workspaceId, settings.defaultAgent, typeLater ? undefined : built.text)
+      // A draft is never a launch prompt: Orca would submit it. It is typed once the agent is ready.
+      const text = asDraft ? draftText : built.ok ? built.text : draftText
+      const typeLater = asDraft || Boolean(deps.waitForIdle)
+      const terminalId = await host.launchAgent(workspaceId, settings.defaultAgent, typeLater ? undefined : text)
       starting.set(workspaceId, { terminalId, at: now() })
       const shown = await show(terminalId)
-      log.info('command', `${command.id} -> launched`, { terminal: terminalId, agent: settings.defaultAgent, length: built.text.length, shown, typeLater })
-      if (typeLater) deliverWhenReady(workspaceId, terminalId, command.id, built.text)
-      return { ok: true, action: 'launched', terminalId, text: built.text }
+      log.info('command', `${command.id} -> launched`, { terminal: terminalId, agent: settings.defaultAgent, length: text.length, shown, typeLater, draft: asDraft })
+      if (typeLater && deps.waitForIdle) deliverWhenReady(workspaceId, terminalId, command.id, text, !asDraft)
+      else if (typeLater) starting.delete(workspaceId)
+      return { ok: true, action: 'launched', terminalId, text }
     } catch (error) {
       log.error('command', 'failed', { command: command.id, error: messageOf(error) })
       return { ok: false, error: messageOf(error) }

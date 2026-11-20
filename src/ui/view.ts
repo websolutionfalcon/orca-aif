@@ -12,6 +12,7 @@ export interface ViewHandlers {
   open(path: string): void
   dismiss(): void
   toggleDone(): void
+  draft(command: PanelCommand): void
   skillsSearch(query: string): void
   toggleSkills(): void
   argInput(command: PanelCommand, value: string): void
@@ -25,16 +26,42 @@ function card(title: string, ...children: (VNode | string | null | false)[]): VN
 }
 
 /** A card whose heading carries a small badge (the plan mode). */
-function badgedCard(title: string, badge: { key: string; text: string }, ...children: (VNode | string | null | false)[]): VNode {
+/** A card whose heading carries an optional badge (the plan mode) and an optional New button. */
+function headedCard(
+  title: string,
+  head: { key: string; badge?: string; action?: VNode | null },
+  ...children: (VNode | string | null | false)[]
+): VNode {
   return h(
     'section',
     { class: 'card' },
     h(
       'div',
       { class: 'card-head' },
-      h('div', { class: 'card-title' }, h('h2', null, title), h('span', { class: 'badge', attrs: { 'data-key': `badge:${badge.key}` } }, badge.text))
+      h(
+        'div',
+        { class: 'card-title' },
+        h('h2', null, title),
+        head.badge ? h('span', { class: 'badge', attrs: { 'data-key': `badge:${head.key}` } }, head.badge) : null
+      ),
+      head.action ?? null
     ),
     ...children
+  )
+}
+
+/** "+ New": types `/aif-x ` into the workspace agent without Enter, for the user's own prompt. */
+function newButton(commandId: AifCommandId, state: PanelState, t: PanelTexts, handlers: ViewHandlers): VNode | null {
+  const command = state.commands.find((candidate) => candidate.id === commandId)
+  if (!command) return null
+  return h(
+    'button',
+    {
+      class: `card-new${state.pending === command.id ? ' busy' : ''}`,
+      attrs: { type: 'button', 'data-key': `new:${command.id}`, title: `${t.newHint}: ${command.label} …`, disabled: state.pending !== null },
+      on: { click: () => handlers.draft(command) }
+    },
+    `+ ${t.new}`
   )
 }
 
@@ -180,18 +207,20 @@ function taskList(plan: PlanInfo, state: PanelState, t: PanelTexts, handlers: Vi
 }
 
 function planCard(status: Ready, state: PanelState, t: PanelTexts, handlers: ViewHandlers): VNode {
+  const action = newButton('plan', state, t, handlers)
   if (status.kind === 'ambiguous') {
-    return card(
+    return headedCard(
       t.plan,
+      { key: 'plan', action },
       h('p', null, t.ambiguous),
       h('ul', { class: 'artifacts' }, status.candidates.map((path) => h('li', null, h('span', { class: 'mark' }, '•'), fileLink(path, path, handlers))))
     )
   }
   const plan = status.plan
-  if (!plan) return card(t.plan, h('p', { class: 'subtle' }, t.noPlan))
-  return badgedCard(
+  if (!plan) return headedCard(t.plan, { key: 'plan', action }, h('p', { class: 'subtle' }, t.noPlan))
+  return headedCard(
     t.plan,
-    { key: 'plan', text: t.kinds[plan.kind] },
+    { key: 'plan', badge: t.kinds[plan.kind], action },
     h('div', { class: 'row' }, fileLink(plan.path, plainText(plan.title ?? plan.path), handlers)),
     progress(plan.done, plan.total),
     h('div', { class: 'subtle' }, status.kind === 'done' ? t.allDone : `${plan.done}/${plan.total} ${t.tasks}`),
@@ -199,11 +228,12 @@ function planCard(status: Ready, state: PanelState, t: PanelTexts, handlers: Vie
   )
 }
 
-function roadmapCard(status: Ready, t: PanelTexts, handlers: ViewHandlers): VNode | null {
+function roadmapCard(status: Ready, state: PanelState, t: PanelTexts, handlers: ViewHandlers): VNode | null {
   const roadmap = status.roadmap
   if (!roadmap || roadmap.total === 0) return null
-  return card(
+  return headedCard(
     t.roadmap,
+    { key: 'roadmap', action: newButton('roadmap', state, t, handlers) },
     h('div', { class: 'row' }, fileLink(roadmap.path, `${roadmap.done}/${roadmap.total} ${t.milestones}`, handlers)),
     progress(roadmap.done, roadmap.total),
     h(
@@ -342,7 +372,7 @@ export function view(state: PanelState, t: PanelTexts, handlers: ViewHandlers): 
   } else {
     parts.push(
       planCard(status, state, t, handlers),
-      roadmapCard(status, t, handlers),
+      roadmapCard(status, state, t, handlers),
       contextCard(status, state, t, handlers),
       status.warnings.length > 0
         ? card(t.warnings, h('ul', null, status.warnings.map((warning) => h('li', { class: 'subtle' }, warning))))

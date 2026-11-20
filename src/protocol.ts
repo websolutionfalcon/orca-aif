@@ -32,7 +32,7 @@ declare module 'orca' {
     'status.refresh': { output: Outcome<{ status: AifStatus }> }
     /** Sends a catalog command (with an optional argument) to the workspace agent. */
     'command.run': {
-      input: { command: AifCommandId; argument?: string }
+      input: { command: AifCommandId; argument?: string; draft?: boolean }
       output: Outcome<{ action: CommandAction; terminalId: string; text: string }>
     }
     /** Opens one of the artifacts the current status lists, in Orca's editor. */

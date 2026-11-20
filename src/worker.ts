@@ -212,9 +212,9 @@ export default function activate(orca: OrcaWorkerApi): void {
     orca.panels.handle('status.refresh', () => answer('status.refresh', async () => ({ ok: true, status: await refresh('panel:refresh') })))
   )
   disposables.push(
-    orca.panels.handle('command.run', ({ command, argument }) =>
+    orca.panels.handle('command.run', ({ command, argument, draft }) =>
       answer('command.run', async () => {
-        const result = await commands.run({ command, argument, source: 'panel' })
+        const result = await commands.run({ command, argument, source: 'panel', draft: draft === true })
         return result.ok ? { ok: true, action: result.action, terminalId: result.terminalId, text: result.text } : result
       })
     )

@@ -13,3 +13,8 @@ test('regression: no argument means no argument key at all', () => {
 test('a typed argument is trimmed and kept', () => {
   assert.deepEqual(commandRunInput('plan', '  full add search '), { command: 'plan', argument: 'full add search' })
 })
+
+test('draft flag is sent only when set', () => {
+  assert.deepEqual(commandRunInput('plan', undefined, true), { command: 'plan', draft: true })
+  assert.deepEqual(commandRunInput('plan', undefined, false), { command: 'plan' })
+})
