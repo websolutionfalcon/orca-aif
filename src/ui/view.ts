@@ -1,6 +1,6 @@
 // Builds the panel's virtual tree from state. Pure: handlers come in, nothing is read from Orca.
 import type { AifStatus, PlanInfo, ReadyStatus } from '../core/types.ts'
-import type { PanelAgent, PanelCommand } from '../protocol.ts'
+import type { PanelCommand } from '../protocol.ts'
 import { h, type VNode } from './dom.ts'
 import type { PanelTexts } from './i18n.ts'
 import type { PanelState } from './state.ts'
@@ -207,25 +207,6 @@ function commandsCard(commands: PanelCommand[], state: PanelState, t: PanelTexts
   )
 }
 
-function agentCard(agents: PanelAgent[], t: PanelTexts): VNode {
-  if (agents.length === 0) return card(t.agent, h('p', { class: 'subtle' }, t.noAgent))
-  return card(
-    t.agent,
-    h(
-      'ul',
-      { class: 'artifacts' },
-      agents.map((agent) =>
-        h(
-          'li',
-          { class: 'row' },
-          h('span', { class: 'text' }, agent.title ?? agent.agent ?? '?'),
-          h('span', { class: 'agent-state' }, t.states[agent.state])
-        )
-      )
-    )
-  )
-}
-
 export function view(state: PanelState, t: PanelTexts, handlers: ViewHandlers): VNode {
   const status = state.status
   const parts: (VNode | null)[] = [header(state, t, handlers), notice(state, handlers)]
@@ -245,14 +226,10 @@ export function view(state: PanelState, t: PanelTexts, handlers: ViewHandlers): 
       status.kind === 'remote'
         ? h('div', { class: 'banner' }, t.remote)
         : h('div', { class: 'banner error', attrs: { role: 'alert' } }, `${t.errorTitle}: `, h('code', null, status.message)),
-      commandsCard(state.commands, state, t, handlers),
-      agentCard(state.agents, t)
     )
   } else {
     parts.push(
       planCard(status, state, t, handlers),
-      commandsCard(state.commands, state, t, handlers),
-      agentCard(state.agents, t),
       roadmapCard(status, t, handlers),
       contextCard(status, t, handlers),
       status.warnings.length > 0

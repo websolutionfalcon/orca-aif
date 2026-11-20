@@ -111,16 +111,21 @@ test('artifacts link existing files, the missing one is plain text', () => {
   assert.match(textOf(tree), /Architecture — missing/)
 })
 
-test('commands: input only for commands with an argument, disabled while pending', () => {
-  const h = handlers()
-  const idle = view(state({ kind: 'no-plan', ...ready, plan: null }), en, h)
-  assert.equal(findAll(idle, byKey('arg:plan'))[0]?.attrs.value, 'typed')
-  assert.equal(findAll(idle, byKey('arg:commit')).length, 0)
-  findAll(idle, byKey('run:commit'))[0].on.click(new Event('click'))
-  assert.deepEqual(h.ran, ['commit'])
+test('the ready panel shows plan, roadmap and context only: no command or agent cards', () => {
+  const tree = view(state({ kind: 'in-progress', ...ready }), en, handlers())
+  const titles = findAll(tree, (node) => node.tag === 'h2').map((node) => textOf(node))
+  assert.deepEqual(titles, ['Plan', 'Roadmap', 'Context', 'Warnings'])
+  assert.equal(findAll(tree, (node) => (node.attrs['data-key'] ?? '').startsWith('run:')).length, 0)
+})
 
-  const busy = view(state({ kind: 'no-plan', ...ready, plan: null }, { pending: 'plan' }), en, h)
-  assert.equal(findAll(busy, byKey('run:commit'))[0].attrs.disabled, '')
+test('not installed: the set up button takes an optional argument and is disabled while pending', () => {
+  const h = handlers()
+  const idle = view(state({ kind: 'not-installed', workspace }, { commands: [] }), en, h)
+  assert.equal(findAll(idle, byKey('arg:setup'))[0]?.attrs.value, 'typed')
+  findAll(idle, byKey('run:setup'))[0].on.click(new Event('click'))
+  assert.deepEqual(h.ran, ['setup'])
+  const busy = view(state({ kind: 'not-installed', workspace }, { commands: [], pending: 'setup' }), en, h)
+  assert.equal(findAll(busy, byKey('run:setup'))[0].attrs.disabled, '')
 })
 
 test('not installed offers set up only; Russian texts', () => {

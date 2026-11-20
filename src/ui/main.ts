@@ -36,15 +36,6 @@ function dispatch(action: Action): void {
   draw()
 }
 
-async function loadAgents(): Promise<void> {
-  try {
-    const answer = await orca.plugin.request('agents.get')
-    if (answer.ok) dispatch({ type: 'agents', agents: answer.agents })
-  } catch {
-    // Agents are optional context; the status still shows.
-  }
-}
-
 async function load(): Promise<void> {
   try {
     const answer = await orca.plugin.request('status.get')
@@ -53,7 +44,6 @@ async function load(): Promise<void> {
   } catch (error) {
     dispatch({ type: 'failed', lead: t.failed, message: errorText(error) })
   }
-  await loadAgents()
 }
 
 const handlers = {
@@ -66,7 +56,6 @@ const handlers = {
       } catch (error) {
         dispatch({ type: 'failed', lead: t.failed, message: errorText(error) })
       }
-      await loadAgents()
     })()
   },
   run(command: PanelCommand): void {
@@ -82,7 +71,6 @@ const handlers = {
         }
         args.delete(command.id)
         dispatch({ type: 'commandDone', action: answer.action, text: answer.text, lead: t[answer.action] })
-        await loadAgents()
       } catch (error) {
         dispatch({ type: 'failed', lead: t.failed, message: errorText(error) })
       }
@@ -111,7 +99,5 @@ const handlers = {
 }
 
 orca.plugin.on('status.changed', ({ status, commands }) => dispatch({ type: 'loaded', status, commands }))
-orca.on('agent.status.changed', () => void loadAgents())
-orca.on('workspace.changed', () => void loadAgents())
 draw()
 void load()

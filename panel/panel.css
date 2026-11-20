@@ -1,6 +1,6 @@
 /* AI Factory panel. Colours come only from Orca's theme variables (--orca-*). */
 :root {
-  --gap: 10px;
+  --gap: 12px;
   --radius: var(--orca-radius, 6px);
   color-scheme: light dark;
 }
@@ -17,7 +17,8 @@ body {
   background: var(--orca-background);
 }
 
-#app {
+#app,
+#app > .root {
   display: flex;
   flex-direction: column;
   gap: var(--gap);
