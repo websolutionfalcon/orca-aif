@@ -195,13 +195,6 @@
         "default": "auto"
       },
       {
-        "key": "panelCommands",
-        "title": "Commands in the panel",
-        "description": "Comma-separated command ids shown as buttons in the panel, in order.",
-        "type": "string",
-        "default": "plan, implement, verify, review, commit, fix, roadmap, explore"
-      },
-      {
         "key": "pollIntervalSec",
         "title": "Check for changes every (seconds)",
         "description": "How often the plugin looks at .ai-factory/ files for changes.",

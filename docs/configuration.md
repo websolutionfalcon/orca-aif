@@ -11,14 +11,12 @@ Orca → Settings → Plugins → **AI Factory**. Изменения приме�
 | `defaultAgent` | string | `claude` | Агент, которого Orca запускает, если в workspace агента нет (`claude`, `codex`, …). Допустимы `A-Z a-z 0-9 . _ -`, до 64 символов |
 | `sendMode` | enum | `agent-or-launch` | `agent-or-launch` — в запущенного агента, иначе запустить; `always-launch` — всегда новый агент |
 | `commandPrefix` | enum | `auto` | `auto` — `$` для Codex, `/` для остальных; `/` или `$` — всегда этот префикс |
-| `panelCommands` | string | `plan, implement, verify, review, commit, fix, roadmap, explore` | Кнопки панели по порядку, через запятую; принимаются `plan`, `aif-plan`, `/aif-plan`, а `aif` означает `setup`. Неизвестные игнорируются, пустой список возвращает значение по умолчанию |
 | `pollIntervalSec` | integer 1–60 | `3` | Как часто проверять изменения в `.ai-factory/` |
 | `notifyOnPlanDone` | boolean | `true` | Уведомление, когда в активном плане отмечена последняя задача |
 | `logLevel` | enum | `info` | `debug` / `info` / `warn` / `error` — подробность `orca plugin logs` |
 
 Некорректные значения не ломают плагин: подставляется значение по умолчанию.
 
-Доступные id команд: `setup`, `warmup`, `explore`, `roadmap`, `plan`, `improve`, `implement`, `verify`, `review`, `commit`, `fix`, `docs`.
 
 ## Что плагин читает из `.ai-factory/config.yaml`
 

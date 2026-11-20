@@ -1,5 +1,5 @@
 import { assert, test } from 'orca/testing'
-import { AIF_COMMANDS, buildCommandText, MAX_ARGUMENT_LENGTH, parseCommandList, prefixFor, sanitizeArgument } from './commands.ts'
+import { AIF_COMMANDS, buildCommandText, MAX_ARGUMENT_LENGTH, prefixFor, sanitizeArgument } from './commands.ts'
 
 test('prefix by agent, overridden by the setting', () => {
   assert.equal(prefixFor('claude'), '/')
@@ -35,10 +35,6 @@ test('every catalog id is unique and builds', () => {
   for (const command of AIF_COMMANDS) assert.equal(buildCommandText(command.id, '/', 'x').ok, true)
 })
 
-test('panel command list setting', () => {
-  assert.deepEqual(parseCommandList('plan, /aif-implement, aif-verify, nope, plan, aif'), ['plan', 'implement', 'verify', 'setup'])
-  assert.deepEqual(parseCommandList(undefined), [])
-})
 
 function pick(result: ReturnType<typeof buildCommandText>): string {
   return result.ok ? result.text : `ERROR ${result.error}`

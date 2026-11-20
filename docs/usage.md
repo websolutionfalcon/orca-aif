@@ -82,6 +82,6 @@ Ultra-бандл распознаётся только по маркеру `<!--
 
 ## See Also
 
-- [Настройки](configuration.md) — `sendMode`, `defaultAgent`, `commandPrefix`, `panelCommands`
+- [Настройки](configuration.md) — `sendMode`, `defaultAgent`, `commandPrefix`
 - [Доступ и безопасность](permissions.md) — зачем нужны `terminal:send` и `agent:launch`
 - [Начало работы](getting-started.md) — установка и проверка

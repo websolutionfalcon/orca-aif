@@ -71,16 +71,3 @@ export function buildCommandText(id: string, prefix: '/' | '$', rawArgument?: un
   }
   return { ok: true, command, text: argument ? `${prefix}${command.skill} ${argument}` : `${prefix}${command.skill}` }
 }
-
-/** Parses the `panelCommands` setting: known ids in the given order, unknown and repeated ones dropped. */
-export function parseCommandList(raw: unknown): AifCommandId[] {
-  if (typeof raw !== 'string') return []
-  const ids: AifCommandId[] = []
-  for (const part of raw.split(',')) {
-    // Accept `plan`, `aif-plan` and `/aif-plan`; bare `aif` means setup.
-    const name = part.trim().toLowerCase().replace(/^[/$]/, '').replace(/^aif-/, '')
-    const command = findCommand(name === 'aif' ? 'setup' : name)
-    if (command && !ids.includes(command.id)) ids.push(command.id)
-  }
-  return ids
-}
