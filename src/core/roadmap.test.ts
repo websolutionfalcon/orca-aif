@@ -19,8 +19,8 @@ test('an empty roadmap has no next milestone', () => {
   assert.equal(roadmap.next, null)
 })
 
-test("this repository's ROADMAP.md", () => {
-  const text = readFileSync(new URL('../../.ai-factory/ROADMAP.md', import.meta.url), 'utf8')
+test('a real ROADMAP.md (snapshot of this repository)', () => {
+  const text = readFileSync(new URL('../../test/fixtures/sample-project/ROADMAP.md', import.meta.url), 'utf8')
   const roadmap = parseRoadmap(text, '.ai-factory/ROADMAP.md')
   assert.equal(roadmap.total, 10)
   assert.equal(roadmap.next?.name, roadmap.milestones.find((m) => !m.done)?.name)

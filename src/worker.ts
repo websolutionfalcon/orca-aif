@@ -14,7 +14,7 @@ import { createStatusService } from './worker/statusService.ts'
 import { createWatcher, type Watcher } from './worker/watcher.ts'
 import { fingerprintWorkspace, isRemote } from './worker/workspaceFs.ts'
 
-export const VERSION = '0.1.1'
+export const VERSION = '0.1.2'
 
 function systemLocale(): string {
   try {

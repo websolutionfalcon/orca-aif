@@ -2,7 +2,7 @@
   "manifestVersion": 2,
   "id": "ai-factory",
   "name": "AI Factory",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "AI Factory workflow in Orca: quick /aif commands for the workspace agent and live plan, roadmap and setup status in the status bar and the right sidebar.",
   "license": "MIT",
   "author": {

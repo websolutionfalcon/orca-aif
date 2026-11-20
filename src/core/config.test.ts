@@ -77,8 +77,8 @@ test('reserved plan_id_format values behave like slug without a warning', () => 
   assert.deepEqual(config.warnings, [])
 })
 
-test("this repository's own config.yaml", () => {
-  const text = readFileSync(new URL('../../.ai-factory/config.yaml', import.meta.url), 'utf8')
+test('a real config.yaml written by /aif (snapshot of this repository)', () => {
+  const text = readFileSync(new URL('../../test/fixtures/sample-project/config.yaml', import.meta.url), 'utf8')
   const config = resolveConfig(text)
   assert.deepEqual(config.paths, DEFAULT_PATHS)
   assert.equal(config.artifactsLanguage, 'ru')

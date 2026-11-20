@@ -105,16 +105,16 @@ test('summary names the next task', () => {
   assert.equal(summaryOf({ kind: 'no-workspace' }), 'No workspace is focused.')
 })
 
-test("end to end over this repository's .ai-factory/", () => {
-  const read = (path: string): string => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8')
-  const config = resolveConfig(read('.ai-factory/config.yaml'))
+test('end to end over a real .ai-factory/ snapshot', () => {
+  const read = (name: string): string => readFileSync(new URL(`../../test/fixtures/sample-project/${name}`, import.meta.url), 'utf8')
+  const config = resolveConfig(read('config.yaml'))
   const status = buildStatus(
     input({
       config,
       discovery: { plan: { path: '.ai-factory/plans/feature-orca-aif-plugin.md', kind: 'full' }, reason: 'branch', candidates: [], warnings: [] },
-      planText: read('.ai-factory/plans/feature-orca-aif-plugin.md'),
-      roadmapText: read('.ai-factory/ROADMAP.md'),
-      installJson: read('.ai-factory.json')
+      planText: read('plan.md'),
+      roadmapText: read('ROADMAP.md'),
+      installJson: read('ai-factory.json')
     })
   )
   assert.ok(status.kind === 'in-progress' || status.kind === 'done')

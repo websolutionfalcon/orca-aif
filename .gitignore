@@ -1,2 +1,12 @@
 node_modules/
 .orca/
+
+# Local AI-assistant context: Orca installs the whole repository as the plugin,
+# so agent instructions, skills and MCP config must not be published with it.
+.claude/
+.ai-factory/
+.ai-factory.json
+AGENTS.md
+CLAUDE.md
+.mcp.json
+logs/

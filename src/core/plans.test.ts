@@ -59,9 +59,9 @@ describe('parsePlan', () => {
     assert.equal(parsePlan(fixture('archived.md'), 'a.md', 'full').archived, true)
   })
 
-  test('the plan of this repository parses', () => {
+  test('a real full plan (snapshot of this repository) parses', () => {
     const text = readFileSync(
-      new URL('../../.ai-factory/plans/feature-orca-aif-plugin.md', import.meta.url),
+      new URL('../../test/fixtures/sample-project/plan.md', import.meta.url),
       'utf8'
     )
     const plan = parsePlan(text, '.ai-factory/plans/feature-orca-aif-plugin.md', 'full')

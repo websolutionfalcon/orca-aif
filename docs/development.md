@@ -15,7 +15,7 @@
 
 ## Архитектура
 
-Слоистая: зависимости направлены только вниз. Подробно — в [`.ai-factory/ARCHITECTURE.md`](../.ai-factory/ARCHITECTURE.md).
+Слоистая: зависимости направлены только вниз (`core` не знает об Orca и файловой системе, `ui` берёт из `core` только типы).
 
 ```
 panel/index.html → src/ui/*  ──plugin.request / panels.post──┐
@@ -30,7 +30,7 @@ src/worker.ts → src/worker/*Service.ts → src/worker/{workspaceFs, orcaHost, 
 | `src/worker/` | `orcaHost` (обёртки host API), `workspaceFs` (чтение с защитой путей, fingerprint), `watcher` (опрос), `statusService`, `commandService`, `settings`, `log` |
 | `src/ui/` | `main` (связка с Orca), `state` (редьюсеры), `view` (виртуальное дерево), `dom` (мини-VDOM), `i18n` |
 | `src/types/node.d.ts` | Локальные типы используемых API Node |
-| `test/fixtures/` | Фикстуры планов и roadmap |
+| `test/fixtures/` | Фикстуры планов и roadmap; `sample-project/` — снимок реального `.ai-factory/` |
 
 ## Почему в репозитории нет `node_modules`
 
@@ -70,7 +70,7 @@ orca plugin dev emit . workspace.changed --data '{"context":null}'
 
 | Файл | Что покрывает |
 |------|---------------|
-| `src/core/*.test.ts` | Разбор `config.yaml`, планов, ultra, roadmap, статуса, команд; включая собственный `.ai-factory/` репозитория |
+| `src/core/*.test.ts` | Разбор `config.yaml`, планов, ultra, roadmap, статуса, команд; включая снимок реального `.ai-factory/` (`test/fixtures/sample-project/`) |
 | `src/worker/workspaceFs.test.ts` | Чтение во временной папке, выход за пределы workspace, symlink, лимит размера, watcher |
 | `src/worker/statusService.test.ts` | Переходы состояний, кэш, уведомление, сериализация обновлений |
 | `src/worker/commandService.test.ts` | Все комбинации «агент × аргумент × источник» |
@@ -85,7 +85,7 @@ HTML-панель не рендерится ни `mount`, ни `orca plugin chec
 - Ответы worker панели — `Outcome`: `{ ok: true, … } | { ok: false, error }`. Исключения в панель не уходят.
 - Логи — только через `createLogger` (`orca.log`). Повторяющиеся предупреждения — через `warnOnce`. Опрос изменений логов не пишет.
 - Новый вызов host API → нужное разрешение в манифесте и `orca.host.has()` для методов новее `engines.orca`.
-- Правила кода — [`.ai-factory/rules/base.md`](../.ai-factory/rules/base.md).
+- Файлы — `camelCase.ts`, тесты рядом (`*.test.ts`), импорты из `orca/worker` — только `import type`.
 
 ## Публикация
 
