@@ -62,6 +62,14 @@ export default function activate(orca: OrcaWorkerApi): void {
     host,
     log,
     settings: () => settings,
+    // Type the command once the started agent is idle (`orca terminal wait --for tui-idle`);
+    // tests and environments without the CLI fall back to Orca's launch prompt.
+    waitForIdle:
+      process.env.AIF_DISABLE_CLI === '1'
+        ? undefined
+        : async (terminalId: string) => {
+            await runOrcaCli(['terminal', 'wait', '--terminal', terminalId, '--for', 'tui-idle', '--timeout-ms', '90000'], 100_000)
+          },
     workspaceId: async () => {
       const known = status.workspace()?.id
       if (known) return known

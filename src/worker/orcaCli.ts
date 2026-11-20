@@ -8,7 +8,7 @@ const TIMEOUT_MS = 10_000
 export const PLUGIN_ID = 'ai-factory'
 export const PANEL_ID = 'aif'
 
-export type CliRunner = (args: readonly string[]) => Promise<unknown>
+export type CliRunner = (args: readonly string[], timeoutMs?: number) => Promise<unknown>
 
 /** The CLI inside the Orca app running this worker; `orca` on the PATH otherwise. */
 export function orcaCliPath(): string {
@@ -34,9 +34,9 @@ export function parseCliOutput(stdout: string): unknown {
   return answer.result
 }
 
-export const runOrcaCli: CliRunner = (args) =>
+export const runOrcaCli: CliRunner = (args, timeoutMs = TIMEOUT_MS) =>
   new Promise((resolve, reject) => {
-    execFile(orcaCliPath(), [...args, '--json'], { timeout: TIMEOUT_MS }, (error, stdout) => {
+    execFile(orcaCliPath(), [...args, '--json'], { timeout: timeoutMs }, (error, stdout) => {
       try {
         resolve(parseCliOutput(stdout))
       } catch (parseError) {

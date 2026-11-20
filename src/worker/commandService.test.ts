@@ -10,8 +10,13 @@ interface Calls {
   focused: string[]
 }
 
-function setup(agents: ListedAgent[], overrides: Partial<Settings> = {}, accept = true) {
-  const calls: Calls = { sent: [], launched: [], focused: [] }
+function setup(
+  agents: ListedAgent[],
+  overrides: Partial<Settings> = {},
+  accept = true,
+  waitForIdle?: (terminalId: string) => Promise<void>
+) {
+  const calls: Calls & { notes: string[] } = { sent: [], launched: [], focused: [], notes: [] }
   const host = {
     listAgents: async () => agents,
     sendText: async (terminalId: string, text: string, enter: boolean) => {
@@ -25,14 +30,16 @@ function setup(agents: ListedAgent[], overrides: Partial<Settings> = {}, accept 
     focusTerminal: async (terminalId: string) => {
       calls.focused.push(terminalId)
       return true
-    }
+    },
+    notify: async (_title: string, body: string) => void calls.notes.push(body)
   } as unknown as OrcaHost
   const logs: string[] = []
   const service = createCommandService({
     host,
     log: createLogger({ log: (m: string) => logs.push(m) }, () => 'debug'),
     settings: () => ({ ...DEFAULT_SETTINGS, ...overrides }),
-    workspaceId: async () => 'w1'
+    workspaceId: async () => 'w1',
+    waitForIdle
   })
   return { service, calls, logs }
 }
@@ -141,5 +148,31 @@ describe('regressions (background launch)', () => {
     assert.equal(again.ok, false)
     assert.match(again.ok ? '' : again.error, /starting/)
     assert.deepEqual(calls.focused, ['term-new', 'term-new'])
+  })
+})
+
+describe('regressions (launch prompt lost)', () => {
+  test('launches without a prompt, waits for the agent to be idle, then types the command', async () => {
+    let release: () => void = () => undefined
+    const idle = new Promise<void>((done) => (release = done))
+    const { service, calls } = setup([], {}, true, () => idle)
+    const result = await service.run({ command: 'rules', source: 'panel' })
+    assert.deepEqual(result, { ok: true, action: 'launched', terminalId: 'term-new', text: '/aif-rules' })
+    assert.deepEqual(calls.launched, [{ workspaceId: 'w1', agent: 'claude', prompt: undefined }])
+    assert.deepEqual(calls.sent, [], 'nothing is typed before the agent is ready')
+    release()
+    await service.settled()
+    assert.deepEqual(calls.sent, [{ terminalId: 'term-new', text: '/aif-rules', enter: true }])
+  })
+
+  test('when the agent never gets idle, the user is told to type the command', async () => {
+    const { service, calls } = setup([], {}, true, async () => {
+      throw new Error('timeout')
+    })
+    await service.run({ command: 'rules', source: 'panel' })
+    await service.settled()
+    assert.deepEqual(calls.sent, [])
+    assert.equal(calls.notes.length, 1)
+    assert.match(calls.notes[0], /\/aif-rules/)
   })
 })
