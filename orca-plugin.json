@@ -2,7 +2,7 @@
   "manifestVersion": 2,
   "id": "ai-factory",
   "name": "AI Factory",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "AI Factory workflow in Orca: quick /aif commands for the workspace agent and live plan, roadmap and setup status in the status bar and the right sidebar.",
   "license": "MIT",
   "author": {
@@ -14,23 +14,23 @@
   "icon": "assets/icon.png",
   "cover": {
     "path": "assets/cover.png",
-    "alt": "AI Factory for Orca: plugin icon and title beside the sidebar panel with a plan at 4/8 tasks and command buttons."
+    "alt": "AI Factory for Orca: the plugin title beside its real sidebar panel with a plan at 4/8, the roadmap and context."
   },
   "screenshots": [
     {
       "path": "assets/screenshot-1.png",
-      "alt": "Orca window: Claude Code runs /aif-implement, the AI Factory panel shows the plan, the status bar shows AIF 4/8.",
+      "alt": "An Orca window with Claude running /aif-implement, the AI Factory panel and the AIF 4/8 status bar item with its summary.",
       "caption": "Live plan progress next to the agent"
     },
     {
       "path": "assets/screenshot-2.png",
-      "alt": "The AI Factory panel after sending $aif-plan to a Codex agent; the command appears in the Codex terminal.",
-      "caption": "One-click commands, with the right prefix for Claude or Codex"
+      "alt": "A roadmap Plan button typed /aif-plan for a milestone into the agent without sending it, ready for the user prompt.",
+      "caption": "Draft /aif-plan from any open milestone"
     },
     {
       "path": "assets/screenshot-3.png",
-      "alt": "Three AI Factory panels side by side: light theme, dark theme and Russian interface.",
-      "caption": "Follows Orca theme and language"
+      "alt": "Close-ups of the plan, roadmap and context cards of the AI Factory panel.",
+      "caption": "Plan, roadmap and context at a glance"
     }
   ],
   "engines": {

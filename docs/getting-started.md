@@ -48,13 +48,13 @@ orca plugin dev load ./orca-aif --approve <fingerprint>
 
 ```bash
 orca plugin list --json            # local.ai-factory / <owner>.ai-factory включён
-orca plugin logs <plugin-key>      # INFO [aif:worker] activated v0.2.0
+orca plugin logs <plugin-key>      # INFO [aif:worker] activated v0.2.1
 ```
 
 Ожидаемые строки лога после активации:
 
 ```
-INFO [aif:worker] activated v0.2.0 {"locale":"en-US"}
+INFO [aif:worker] activated v0.2.1 {"locale":"en-US"}
 INFO [aif:status] no-workspace -> in-progress {"reason":"activate"}
 INFO [aif:watch] watching workspace {"workspace":"…","intervalSec":3}
 ```
