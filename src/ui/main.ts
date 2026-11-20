@@ -1,6 +1,7 @@
 // Panel entry (panel/index.html loads it). Talks to the worker only through src/protocol.ts.
 import type { PanelCommand } from '../protocol.ts'
 import { render } from './dom.ts'
+import { commandRunInput } from './requests.ts'
 import { panelTexts } from './i18n.ts'
 import { INITIAL_STATE, reduce, type Action, type PanelState } from './state.ts'
 import { view } from './view.ts'
@@ -66,7 +67,7 @@ const handlers = {
     dispatch({ type: 'pending', command: command.id })
     void (async () => {
       try {
-        const answer = await orca.plugin.request('command.run', { command: command.id, argument }, { timeoutMs: 60_000 })
+        const answer = await orca.plugin.request('command.run', commandRunInput(command.id, argument), { timeoutMs: 60_000 })
         if (!answer.ok) {
           dispatch({ type: 'failed', lead: t.failed, message: answer.error })
           return
