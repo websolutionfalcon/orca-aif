@@ -139,3 +139,5 @@ export type AifCommandId =
   | 'commit'
   | 'fix'
   | 'docs'
+  | 'architecture'
+  | 'rules'

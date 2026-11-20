@@ -349,3 +349,29 @@ code {
     animation: none;
   }
 }
+
+.artifacts li.absent {
+  align-items: center;
+}
+
+.run-btn {
+  margin-left: auto;
+  flex: none;
+  border: 1px solid var(--orca-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--orca-primary);
+  font: 600 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 2px 8px;
+}
+
+.run-btn:hover:not(:disabled) {
+  background: var(--orca-accent);
+  color: var(--orca-accent-foreground);
+  border-color: transparent;
+}
+
+.run-btn.busy {
+  background: var(--orca-accent);
+  color: var(--orca-accent-foreground);
+}

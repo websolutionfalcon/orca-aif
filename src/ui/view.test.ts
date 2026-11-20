@@ -47,7 +47,9 @@ const ready: ReadyStatus = {
 }
 const commands: PanelCommand[] = [
   { id: 'plan', label: '/aif-plan', title: 'Plan', arg: 'required', argHint: 'description' },
-  { id: 'commit', label: '/aif-commit', title: 'Commit', arg: 'none', argHint: '' }
+  { id: 'commit', label: '/aif-commit', title: 'Commit', arg: 'none', argHint: '' },
+  { id: 'architecture', label: '/aif-architecture', title: 'Architecture', arg: 'optional', argHint: '' },
+  { id: 'rules', label: '/aif-rules', title: 'Rules', arg: 'optional', argHint: '' }
 ]
 
 function handlers(): ViewHandlers & { opened: string[]; ran: string[] } {
@@ -224,4 +226,16 @@ test('the plan mode is a badge next to the Plan heading, not beside the title', 
   assert.match(textOf(head), /^Plan full$/)
   const titleRow = findAll(tree, byClass('row')).find((row) => textOf(row).includes('Auth plan'))
   assert.equal(textOf(titleRow!), 'Auth plan')
+})
+
+test('missing context artifacts get a button that runs their command in the agent', () => {
+  const h = handlers()
+  const tree = view(state({ kind: 'in-progress', ...ready }), en, h)
+  const fix = findAll(tree, byKey('fix:architecture'))[0]
+  assert.equal(textOf(fix), '▶ /aif-architecture')
+  assert.equal(findAll(tree, byKey('fix:config')).length, 0, 'present artifacts get no button')
+  fix.on.click(new Event('click'))
+  assert.deepEqual(h.ran, ['architecture'])
+  const busy = view(state({ kind: 'in-progress', ...ready }, { pending: 'architecture' }), en, h)
+  assert.equal(findAll(busy, byKey('fix:architecture'))[0].attrs.disabled, '')
 })

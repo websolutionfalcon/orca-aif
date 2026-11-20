@@ -125,6 +125,16 @@
         "id": "aif.run.docs",
         "title": "AI Factory: Docs",
         "when": "workspace"
+      },
+      {
+        "id": "aif.run.architecture",
+        "title": "AI Factory: Architecture",
+        "when": "workspace"
+      },
+      {
+        "id": "aif.run.rules",
+        "title": "AI Factory: Rules",
+        "when": "workspace"
       }
     ],
     "statusBarItems": [

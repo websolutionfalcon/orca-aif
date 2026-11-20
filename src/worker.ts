@@ -2,7 +2,7 @@
 // services together: commands, events, panel requests, the change watcher and the status bar.
 // Because the manifest has a status bar item, Orca keeps this worker running while it is enabled.
 import type { OrcaWorkerApi } from 'orca/worker'
-import { AIF_COMMANDS, findCommand, prefixFor } from './core/commands.ts'
+import { AIF_COMMANDS, prefixFor } from './core/commands.ts'
 import { summaryOf } from './core/status.ts'
 import type { AifStatus } from './core/types.ts'
 import type { Outcome, PanelCommand } from './protocol.ts'
@@ -131,10 +131,8 @@ export default function activate(orca: OrcaWorkerApi): void {
     const fallback = settings.sendMode === 'always-launch' ? settings.defaultAgent : installed.length === 1 ? installed[0] : settings.defaultAgent
     const prefix = prefixFor(running ?? fallback, settings.commandPrefix)
     log.debug('panel', '[FIX:prefix] command labels', { prefix, running, fallback })
-    return settings.panelCommands
-      .map((id) => findCommand(id))
-      .filter((command): command is NonNullable<typeof command> => Boolean(command))
-      .map((command) => ({ id: command.id, label: `${prefix}${command.skill}`, title: command.title, arg: command.arg, argHint: command.argHint }))
+    // The whole catalog: the panel picks what it needs (set up, missing context artifacts).
+    return AIF_COMMANDS.map((command) => ({ id: command.id, label: `${prefix}${command.skill}`, title: command.title, arg: command.arg, argHint: command.argHint }))
   }
 
   async function answer<T extends object>(name: string, run: () => Promise<Outcome<T>>): Promise<Outcome<T>> {

@@ -1,5 +1,5 @@
 // Builds the panel's virtual tree from state. Pure: handlers come in, nothing is read from Orca.
-import type { AifStatus, PlanInfo, ReadyStatus } from '../core/types.ts'
+import type { AifCommandId, AifStatus, ArtifactKey, PlanInfo, ReadyStatus } from '../core/types.ts'
 import type { PanelCommand } from '../protocol.ts'
 import { h, type VNode } from './dom.ts'
 import { filterSkills } from './skills.ts'
@@ -92,7 +92,17 @@ function notice(state: PanelState, handlers: ViewHandlers): VNode | null {
   )
 }
 
-function contextCard(status: Ready, t: PanelTexts, handlers: ViewHandlers): VNode {
+/** The AI Factory command that creates each context artifact. */
+export const ARTIFACT_COMMANDS: Record<ArtifactKey, AifCommandId> = {
+  config: 'setup',
+  description: 'setup',
+  architecture: 'architecture',
+  roadmap: 'roadmap',
+  rulesFile: 'rules',
+  rules: 'rules'
+}
+
+function contextCard(status: Ready, state: PanelState, t: PanelTexts, handlers: ViewHandlers): VNode {
   return card(
     t.context,
     h(
@@ -105,10 +115,25 @@ function contextCard(status: Ready, t: PanelTexts, handlers: ViewHandlers): VNod
           h('span', { class: 'mark' }, artifact.exists ? '●' : '○'),
           artifact.exists && artifact.key !== 'rules'
             ? fileLink(artifact.path, t.artifacts[artifact.key], handlers)
-            : h('span', { class: artifact.exists ? 'text' : 'text subtle' }, `${t.artifacts[artifact.key]}${artifact.exists ? '' : ` — ${t.missing}`}`)
+            : h('span', { class: artifact.exists ? 'text' : 'text subtle' }, `${t.artifacts[artifact.key]}${artifact.exists ? '' : ` — ${t.missing}`}`),
+          artifact.exists ? null : runButton(state.commands.find((command) => command.id === ARTIFACT_COMMANDS[artifact.key]), artifact.key, state, t, handlers)
         )
       )
     )
+  )
+}
+
+/** A compact "run in the agent" button for a missing artifact's command. */
+function runButton(command: PanelCommand | undefined, key: string, state: PanelState, t: PanelTexts, handlers: ViewHandlers): VNode | null {
+  if (!command) return null
+  return h(
+    'button',
+    {
+      class: `run-btn${state.pending === command.id ? ' busy' : ''}`,
+      attrs: { type: 'button', 'data-key': `fix:${key}`, title: `${t.runInAgent}: ${command.label}`, disabled: state.pending !== null },
+      on: { click: () => handlers.run(command) }
+    },
+    `▶ ${command.label}`
   )
 }
 
@@ -318,7 +343,7 @@ export function view(state: PanelState, t: PanelTexts, handlers: ViewHandlers): 
     parts.push(
       planCard(status, state, t, handlers),
       roadmapCard(status, t, handlers),
-      contextCard(status, t, handlers),
+      contextCard(status, state, t, handlers),
       status.warnings.length > 0
         ? card(t.warnings, h('ul', null, status.warnings.map((warning) => h('li', { class: 'subtle' }, warning))))
         : null,

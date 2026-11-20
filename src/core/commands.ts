@@ -26,7 +26,9 @@ export const AIF_COMMANDS: readonly AifCommand[] = [
   { id: 'review', skill: 'aif-review', title: 'Review', arg: 'optional', argHint: 'PR number or URL' },
   { id: 'commit', skill: 'aif-commit', title: 'Commit', arg: 'none', argHint: '' },
   { id: 'fix', skill: 'aif-fix', title: 'Fix', arg: 'required', argHint: 'bug description' },
-  { id: 'docs', skill: 'aif-docs', title: 'Docs', arg: 'none', argHint: '' }
+  { id: 'docs', skill: 'aif-docs', title: 'Docs', arg: 'none', argHint: '' },
+  { id: 'architecture', skill: 'aif-architecture', title: 'Architecture', arg: 'optional', argHint: 'explicit | structured | microservices | layers' },
+  { id: 'rules', skill: 'aif-rules', title: 'Rules', arg: 'optional', argHint: 'rule text' }
 ]
 
 export const MAX_ARGUMENT_LENGTH = 500
