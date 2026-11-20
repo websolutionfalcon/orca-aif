@@ -24,6 +24,8 @@ export interface PanelState {
   skillsOpen: boolean
   /** A manual refresh is running (the refresh icon spins). */
   refreshing: boolean
+  /** The Context card is unfolded (folded by default). */
+  contextOpen: boolean
 }
 
 export const INITIAL_STATE: PanelState = {
@@ -35,7 +37,8 @@ export const INITIAL_STATE: PanelState = {
   showDone: false,
   skillsQuery: '',
   skillsOpen: false,
-  refreshing: false
+  refreshing: false,
+  contextOpen: false
 }
 
 export type Action =
@@ -49,6 +52,7 @@ export type Action =
   | { type: 'skillsQuery'; query: string }
   | { type: 'toggleSkills' }
   | { type: 'refreshing' }
+  | { type: 'toggleContext' }
 
 export function reduce(state: PanelState, action: Action): PanelState {
   switch (action.type) {
@@ -58,6 +62,8 @@ export function reduce(state: PanelState, action: Action): PanelState {
       return { ...state, loading: false, refreshing: false, status: action.status }
     case 'refreshing':
       return { ...state, refreshing: true }
+    case 'toggleContext':
+      return { ...state, contextOpen: !state.contextOpen }
     case 'pending':
       return { ...state, pending: action.command, notice: null }
     case 'commandDone':

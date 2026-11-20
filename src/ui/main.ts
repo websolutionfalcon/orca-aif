@@ -101,6 +101,9 @@ const handlers = {
   toggleDone(): void {
     dispatch({ type: 'toggleDone' })
   },
+  toggleContext(): void {
+    dispatch({ type: 'toggleContext' })
+  },
   skillsSearch(query: string): void {
     dispatch({ type: 'skillsQuery', query })
   },

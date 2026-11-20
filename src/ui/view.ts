@@ -12,6 +12,7 @@ export interface ViewHandlers {
   open(path: string): void
   dismiss(): void
   toggleDone(): void
+  toggleContext(): void
   draft(command: PanelCommand): void
   skillsSearch(query: string): void
   toggleSkills(): void
@@ -130,9 +131,33 @@ export const ARTIFACT_COMMANDS: Record<ArtifactKey, AifCommandId> = {
 }
 
 function contextCard(status: Ready, state: PanelState, t: PanelTexts, handlers: ViewHandlers): VNode {
-  return card(
-    t.context,
+  const present = status.artifacts.filter((artifact) => artifact.exists).length
+  const total = status.artifacts.length
+  const complete = total > 0 && present === total
+  const open = state.contextOpen
+  return h(
+    'section',
+    { class: 'card' },
     h(
+      'button',
+      {
+        class: 'card-head card-toggle',
+        attrs: { type: 'button', 'data-key': 'context:toggle', 'aria-expanded': open ? 'true' : 'false', title: complete ? t.contextComplete : `${t.contextMissing}: ${total - present}` },
+        on: { click: () => handlers.toggleContext() }
+      },
+      h(
+        'span',
+        { class: 'card-title' },
+        h('span', { class: 'chevron', attrs: { 'aria-hidden': 'true' } }, open ? '▾' : '▸'),
+        h('h2', null, t.context),
+        complete
+          ? h('span', { class: 'ok-mark', attrs: { 'data-key': 'context:complete', 'aria-label': t.contextComplete } }, '✓')
+          : h('span', { class: 'count-mark', attrs: { 'data-key': 'context:count' } }, `${present}/${total}`)
+      )
+    ),
+    !open
+      ? null
+      : h(
       'ul',
       { class: 'artifacts' },
       status.artifacts.map((artifact) =>
@@ -179,7 +204,7 @@ function taskList(plan: PlanInfo, state: PanelState, t: PanelTexts, handlers: Vi
         null,
         h(
           'button',
-          { class: 'link subtle', attrs: { type: 'button', 'data-key': 'toggle-done', 'aria-expanded': state.showDone }, on: { click: () => handlers.toggleDone() } },
+          { class: 'link subtle', attrs: { type: 'button', 'data-key': 'toggle-done', 'aria-expanded': state.showDone ? 'true' : 'false' }, on: { click: () => handlers.toggleDone() } },
           `${state.showDone ? '▾' : '▸'} ${t.completed} (${plan.done})`
         )
       )
@@ -320,7 +345,7 @@ function skillsCard(status: Ready, state: PanelState, t: PanelTexts, handlers: V
       'button',
       {
         class: 'link subtle spoiler',
-        attrs: { type: 'button', 'data-key': 'skills:toggle', 'aria-expanded': open, disabled: query !== '' },
+        attrs: { type: 'button', 'data-key': 'skills:toggle', 'aria-expanded': open ? 'true' : 'false', disabled: query !== '' },
         on: { click: () => handlers.toggleSkills() }
       },
       `${open ? '▾' : '▸'} ${summary}`

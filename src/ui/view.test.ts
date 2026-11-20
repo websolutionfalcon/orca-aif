@@ -67,6 +67,7 @@ function handlers(): ViewHandlers & { opened: string[]; ran: string[]; drafted: 
     open: (path) => opened.push(path),
     dismiss: () => undefined,
     toggleDone: () => undefined,
+    toggleContext: () => undefined,
     skillsSearch: () => undefined,
     toggleSkills: () => undefined,
     argInput: () => undefined,
@@ -116,7 +117,7 @@ test('plan shows progress, phases, next task and commit task', () => {
 
 test('artifacts link existing files, the missing one is plain text', () => {
   const h = handlers()
-  const tree = view(state({ kind: 'in-progress', ...ready }), en, h)
+  const tree = view(state({ kind: 'in-progress', ...ready }, { contextOpen: true }), en, h)
   const links = findAll(tree, byClass('link'))
   links.find((link) => link.attrs.title === '.ai-factory/config.yaml')?.on.click(new Event('click'))
   assert.deepEqual(h.opened, ['.ai-factory/config.yaml'])
@@ -234,13 +235,13 @@ test('the plan mode is a badge next to the Plan heading, not beside the title', 
 
 test('missing context artifacts get a button that runs their command in the agent', () => {
   const h = handlers()
-  const tree = view(state({ kind: 'in-progress', ...ready }), en, h)
+  const tree = view(state({ kind: 'in-progress', ...ready }, { contextOpen: true }), en, h)
   const fix = findAll(tree, byKey('fix:architecture'))[0]
   assert.equal(textOf(fix), '▶ /aif-architecture')
   assert.equal(findAll(tree, byKey('fix:config')).length, 0, 'present artifacts get no button')
   fix.on.click(new Event('click'))
   assert.deepEqual(h.ran, ['architecture'])
-  const busy = view(state({ kind: 'in-progress', ...ready }, { pending: 'architecture' }), en, h)
+  const busy = view(state({ kind: 'in-progress', ...ready }, { pending: 'architecture', contextOpen: true }), en, h)
   assert.equal(findAll(busy, byKey('fix:architecture'))[0].attrs.disabled, '')
 })
 
@@ -262,5 +263,33 @@ describe('New buttons', () => {
     assert.equal(textOf(findAll(empty, byKey('new:plan'))[0]), '+ Новый')
     const busy = view(state({ kind: 'in-progress', ...ready }, { pending: 'plan' }), en, handlers())
     assert.equal(findAll(busy, byKey('new:plan'))[0].attrs.disabled, '')
+  })
+})
+
+describe('context card', () => {
+  const allPresent = ready.artifacts.map((artifact) => ({ ...artifact, exists: true }))
+
+  test('folded by default: no items, a count when something is missing', () => {
+    const tree = view(state({ kind: 'in-progress', ...ready }), en, handlers())
+    assert.equal(findAll(tree, byClass('artifacts')).length, 0)
+    assert.equal(textOf(findAll(tree, byKey('context:count'))[0]), '1/2')
+    assert.equal(findAll(tree, byKey('context:complete')).length, 0)
+    assert.equal(findAll(tree, byKey('context:toggle'))[0].attrs['aria-expanded'], 'false')
+  })
+
+  test('a green check when every item is present', () => {
+    const tree = view(state({ kind: 'in-progress', ...ready, artifacts: allPresent }), en, handlers())
+    assert.equal(textOf(findAll(tree, byKey('context:complete'))[0]), '✓')
+    assert.equal(findAll(tree, byKey('context:count')).length, 0)
+  })
+
+  test('the header toggles it open', () => {
+    let toggled = 0
+    const h = { ...handlers(), toggleContext: () => void toggled++ }
+    findAll(view(state({ kind: 'in-progress', ...ready }), en, h), byKey('context:toggle'))[0].on.click(new Event('click'))
+    assert.equal(toggled, 1)
+    const open = view(state({ kind: 'in-progress', ...ready }, { contextOpen: true }), en, handlers())
+    assert.equal(findAll(open, byClass('artifacts')).length, 1)
+    assert.equal(findAll(open, byKey('context:toggle'))[0].attrs['aria-expanded'], 'true')
   })
 })
