@@ -113,6 +113,11 @@ export function createOrcaHost(orca: OrcaWorkerApi, log: Logger) {
       await call('editor.open', () => orca.host.call('editor.open', { workspaceId, path }))
     },
 
+    /** Runs one of Orca's built-in window actions (`workspace:write`, desktop app only). */
+    runAction: async (action: 'sidebar.right.toggle'): Promise<void> => {
+      await call('commands.run', () => orca.host.call('commands.run', { action }))
+    },
+
     notify: async (title: string, body: string): Promise<void> => {
       await call('notifications.show', () => orca.host.call('notifications.show', { title, body }))
     }

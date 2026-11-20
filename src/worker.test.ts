@@ -29,7 +29,8 @@ function host(agents: unknown[] = []) {
       'statusBar.update': { ok: true },
       'terminal.sendText': { accepted: true },
       'agent.launch': { terminalId: 'term-new' },
-      'editor.open': { opened: true }
+      'editor.open': { opened: true },
+      'commands.run': { ran: true }
     }
   })
 }
@@ -142,6 +143,17 @@ test('always-launch labels buttons with the default agent prefix, not the runnin
   try {
     const answer = await worker.request('status.get')
     assert.ok(answer.ok && answer.commands.every((command) => command.label.startsWith('$')))
+  } finally {
+    await worker.deactivate()
+  }
+})
+
+test('regression: clicking the status bar item opens the right sidebar instead of silently returning text', async () => {
+  const worker = await mountWorker(main, { host: host() })
+  try {
+    await worker.command('aif.statusClick')
+    assert.deepEqual(worker.host.callsOf('commands.run').at(-1), { action: 'sidebar.right.toggle' })
+    assert.ok(worker.logs.some((line) => line.includes('status bar clicked')))
   } finally {
     await worker.deactivate()
   }

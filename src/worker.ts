@@ -14,7 +14,7 @@ import { createStatusService } from './worker/statusService.ts'
 import { createWatcher, type Watcher } from './worker/watcher.ts'
 import { fingerprintWorkspace, isRemote } from './worker/workspaceFs.ts'
 
-export const VERSION = '0.1.2'
+export const VERSION = '0.1.3'
 
 function systemLocale(): string {
   try {
@@ -148,6 +148,19 @@ export default function activate(orca: OrcaWorkerApi): void {
   }
 
   // Palette commands.
+  // Orca shows a command's string result only when it runs from the palette; a status bar click
+  // discards it, so the click toggles the right sidebar where the AI Factory panel lives.
+  disposables.push(
+    orca.commands.register('aif.statusClick', async () => {
+      log.info('command', '[FIX:status-click] status bar clicked; toggling the right sidebar')
+      try {
+        await host.runAction('sidebar.right.toggle')
+      } catch (error) {
+        log.warn('command', '[FIX:status-click] could not toggle the sidebar', { error: messageOf(error) })
+      }
+      return summaryOf(await refresh('command:status-click'), locale)
+    })
+  )
   disposables.push(orca.commands.register('aif.summary', async () => summaryOf(await refresh('command:summary'), locale)))
   disposables.push(
     orca.commands.register('aif.refresh', async () => summaryOf(await refresh('command:refresh'), locale))
