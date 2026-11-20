@@ -127,17 +127,6 @@
         "when": "workspace"
       }
     ],
-    "keybindings": [
-      {
-        "command": "aif.run.implement",
-        "key": "Mod+Alt+I",
-        "when": "workspace"
-      },
-      {
-        "command": "aif.summary",
-        "key": "Mod+Alt+A"
-      }
-    ],
     "statusBarItems": [
       {
         "id": "status",

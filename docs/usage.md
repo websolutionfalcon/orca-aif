@@ -17,7 +17,7 @@
 | `☁ AIF` | `remote` | Workspace на SSH/runtime-хосте |
 
 Подсказка показывает план и прогресс roadmap (`Roadmap: 8/10 milestones · Next: …`).
-**Клик** показывает вкладку **AI Factory** в правой боковой панели (открывает панель, если она закрыта, и переключает на вкладку плагина). Текстовую сводку показывает команда палитры «AI Factory: Show status» (`Cmd+Alt+A`).
+**Клик** показывает вкладку **AI Factory** в правой боковой панели (открывает панель, если она закрыта, и переключает на вкладку плагина). Текстовую сводку показывает команда палитры «AI Factory: Show status».
 
 ## Боковая панель
 
@@ -44,25 +44,25 @@ Ultra-бандл распознаётся только по маркеру `<!--
 
 ## Команды
 
-| Команда палитры | Отправляет | Аргумент | Клавиши |
-|-----------------|-----------|----------|---------|
-| AI Factory: Show status | — (сводка) | — | `Mod+Alt+A` |
-| AI Factory: Refresh status | — (пересчёт) | — | — |
-| AI Factory: Show or hide the right sidebar | — | — | — |
-| AI Factory: Set up project | `/aif` | необязательно | — |
-| AI Factory: Warm up session | `/aif-warmup` | — | — |
-| AI Factory: Explore | `/aif-explore` | необязательно | — |
-| AI Factory: Roadmap | `/aif-roadmap` | необязательно | — |
-| AI Factory: Plan… | `/aif-plan` | **обязательно** | — |
-| AI Factory: Improve plan | `/aif-improve` | необязательно | — |
-| AI Factory: Implement | `/aif-implement` | необязательно | `Mod+Alt+I` |
-| AI Factory: Verify | `/aif-verify` | необязательно | — |
-| AI Factory: Review | `/aif-review` | необязательно | — |
-| AI Factory: Commit | `/aif-commit` | — | — |
-| AI Factory: Fix… | `/aif-fix` | **обязательно** | — |
-| AI Factory: Docs | `/aif-docs` | — | — |
+| Команда палитры | Отправляет | Аргумент |
+|-----------------|-----------|----------|
+| AI Factory: Show status | — (сводка) | — |
+| AI Factory: Refresh status | — (пересчёт) | — |
+| AI Factory: Show or hide the right sidebar | — | — |
+| AI Factory: Set up project | `/aif` | необязательно |
+| AI Factory: Warm up session | `/aif-warmup` | — |
+| AI Factory: Explore | `/aif-explore` | необязательно |
+| AI Factory: Roadmap | `/aif-roadmap` | необязательно |
+| AI Factory: Plan… | `/aif-plan` | **обязательно** |
+| AI Factory: Improve plan | `/aif-improve` | необязательно |
+| AI Factory: Implement | `/aif-implement` | необязательно |
+| AI Factory: Verify | `/aif-verify` | необязательно |
+| AI Factory: Review | `/aif-review` | необязательно |
+| AI Factory: Commit | `/aif-commit` | — |
+| AI Factory: Fix… | `/aif-fix` | **обязательно** |
+| AI Factory: Docs | `/aif-docs` | — |
 
-`Mod` — Cmd на macOS, Ctrl на остальных системах. Команды `/aif-*` доступны только при активном workspace.
+Команды `/aif-*` доступны только при активном workspace. Сочетаний клавиш плагин не назначает.
 
 ## Куда уходит команда
 
