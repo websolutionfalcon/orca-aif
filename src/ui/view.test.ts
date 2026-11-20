@@ -222,3 +222,13 @@ test('refresh is a compact icon button with an accessible label, spinning while 
   const busy = findAll(view(state({ kind: 'no-workspace' }, { refreshing: true }), en, handlers()), byKey('refresh'))[0]
   assert.equal(busy.attrs.class, 'icon-btn spinning')
 })
+
+test('the plan mode is a badge next to the Plan heading, not beside the title', () => {
+  const tree = view(state({ kind: 'in-progress', ...ready }), en, handlers())
+  const badge = findAll(tree, byKey('badge:plan'))[0]
+  assert.equal(textOf(badge), 'full')
+  const head = findAll(tree, byClass('card-title'))[0]
+  assert.match(textOf(head), /^Plan full$/)
+  const titleRow = findAll(tree, byClass('row')).find((row) => textOf(row).includes('Auth plan'))
+  assert.equal(textOf(titleRow!), 'Auth plan')
+})

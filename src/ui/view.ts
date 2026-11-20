@@ -27,7 +27,7 @@ function card(title: string, ...children: (VNode | string | null | false)[]): VN
 /** A card whose header carries an "Open" button for the markdown file it shows. */
 function fileCard(
   title: string,
-  open: { key: string; path: string; t: PanelTexts; handlers: ViewHandlers },
+  open: { key: string; path: string; t: PanelTexts; handlers: ViewHandlers; badge?: string },
   ...children: (VNode | string | null | false)[]
 ): VNode {
   return h(
@@ -36,7 +36,12 @@ function fileCard(
     h(
       'div',
       { class: 'card-head' },
-      h('h2', null, title),
+      h(
+        'div',
+        { class: 'card-title' },
+        h('h2', null, title),
+        open.badge ? h('span', { class: 'badge', attrs: { 'data-key': `badge:${open.key}` } }, open.badge) : null
+      ),
       h(
         'button',
         {
@@ -179,8 +184,8 @@ function planCard(status: Ready, state: PanelState, t: PanelTexts, handlers: Vie
   if (!plan) return card(t.plan, h('p', { class: 'subtle' }, t.noPlan))
   return fileCard(
     t.plan,
-    { key: 'plan', path: plan.path, t, handlers },
-    h('div', { class: 'row' }, fileLink(plan.path, plainText(plan.title ?? plan.path), handlers), h('span', { class: 'subtle' }, t.kinds[plan.kind])),
+    { key: 'plan', path: plan.path, t, handlers, badge: t.kinds[plan.kind] },
+    h('div', { class: 'row' }, fileLink(plan.path, plainText(plan.title ?? plan.path), handlers)),
     progress(plan.done, plan.total),
     h('div', { class: 'subtle' }, status.kind === 'done' ? t.allDone : `${plan.done}/${plan.total} ${t.tasks}`),
     h('ul', { class: 'tasks' }, taskList(plan, state, t, handlers))

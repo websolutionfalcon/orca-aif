@@ -58,8 +58,28 @@ body {
   margin: 0 0 8px;
 }
 
-.card-head h2 {
+.card .card-head h2 {
   margin: 0;
+  line-height: 1;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: var(--orca-accent);
+  color: var(--orca-accent-foreground);
 }
 
 .card-action {
