@@ -92,6 +92,15 @@ export interface WorkspaceRef {
   hostId: string | null
 }
 
+/** An AI Factory skill installed in the project (from its SKILL.md frontmatter). */
+export interface SkillInfo {
+  name: string
+  description: string
+  argumentHint: string | null
+  /** SKILL.md path relative to the workspace root. */
+  path: string
+}
+
 /** Everything a ready status shows, whatever the plan state is. */
 export interface ReadyStatus {
   workspace: WorkspaceRef
@@ -103,6 +112,8 @@ export interface ReadyStatus {
   roadmap: RoadmapInfo | null
   /** Agent ids from `.ai-factory.json` (`claude`, `codex`, …). */
   installedAgents: string[]
+  /** AI Factory skills found in the agents' skills folders, sorted by name. */
+  skills: SkillInfo[]
   warnings: string[]
 }
 

@@ -18,6 +18,10 @@ export interface PanelState {
   notice: Notice | null
   /** Completed plan tasks are folded away unless this is on. */
   showDone: boolean
+  /** Skills library search text; a non-empty query always unfolds the list. */
+  skillsQuery: string
+  /** Skills library unfolded with an empty query. */
+  skillsOpen: boolean
 }
 
 export const INITIAL_STATE: PanelState = {
@@ -26,7 +30,9 @@ export const INITIAL_STATE: PanelState = {
   commands: [],
   pending: null,
   notice: null,
-  showDone: false
+  showDone: false,
+  skillsQuery: '',
+  skillsOpen: false
 }
 
 export type Action =
@@ -37,6 +43,8 @@ export type Action =
   | { type: 'failed'; lead: string; message: string }
   | { type: 'dismiss' }
   | { type: 'toggleDone' }
+  | { type: 'skillsQuery'; query: string }
+  | { type: 'toggleSkills' }
 
 export function reduce(state: PanelState, action: Action): PanelState {
   switch (action.type) {
@@ -54,5 +62,9 @@ export function reduce(state: PanelState, action: Action): PanelState {
       return { ...state, notice: null }
     case 'toggleDone':
       return { ...state, showDone: !state.showDone }
+    case 'skillsQuery':
+      return { ...state, skillsQuery: action.query.slice(0, 200) }
+    case 'toggleSkills':
+      return { ...state, skillsOpen: !state.skillsOpen }
   }
 }

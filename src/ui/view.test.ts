@@ -38,6 +38,11 @@ const ready: ReadyStatus = {
     next: null
   },
   installedAgents: ['claude'],
+  skills: [
+    { name: 'aif-commit', description: 'Create conventional commit messages by analyzing staged changes.', argumentHint: '[scope]', path: '.claude/skills/aif-commit/SKILL.md' },
+    { name: 'aif-plan', description: 'Plan a feature or task in fast, full, or ultra mode.', argumentHint: '[fast | full | ultra] <description>', path: '.claude/skills/aif-plan/SKILL.md' },
+    { name: 'aif-review', description: 'Perform code review on staged changes or a pull request.', argumentHint: null, path: '.claude/skills/aif-review/SKILL.md' }
+  ],
   warnings: ['plan too large']
 }
 const commands: PanelCommand[] = [
@@ -56,6 +61,8 @@ function handlers(): ViewHandlers & { opened: string[]; ran: string[] } {
     open: (path) => opened.push(path),
     dismiss: () => undefined,
     toggleDone: () => undefined,
+    skillsSearch: () => undefined,
+    toggleSkills: () => undefined,
     argInput: () => undefined,
     argValue: () => 'typed'
   }
@@ -114,7 +121,7 @@ test('artifacts link existing files, the missing one is plain text', () => {
 test('the ready panel shows plan, roadmap and context only: no command or agent cards', () => {
   const tree = view(state({ kind: 'in-progress', ...ready }), en, handlers())
   const titles = findAll(tree, (node) => node.tag === 'h2').map((node) => textOf(node))
-  assert.deepEqual(titles, ['Plan', 'Roadmap', 'Context', 'Warnings'])
+  assert.deepEqual(titles, ['Plan', 'Roadmap', 'Context', 'Warnings', 'Skills library'])
   assert.equal(findAll(tree, (node) => (node.attrs['data-key'] ?? '').startsWith('run:')).length, 0)
 })
 
@@ -170,4 +177,38 @@ test('plan and roadmap cards have an Open button for their markdown file', () =>
 test('no Open button without a plan file', () => {
   const tree = view(state({ kind: 'no-plan', ...ready, plan: null }), en, handlers())
   assert.equal(findAll(tree, byKey('open:plan')).length, 0)
+})
+
+describe('skills library', () => {
+  const skillNames = (tree: ReturnType<typeof view>) =>
+    findAll(tree, (node) => (node.attrs['data-key'] ?? '').startsWith('skill:')).map((node) => node.attrs['data-key'].slice(6))
+
+  test('collapsed by default with a search field and the total', () => {
+    const tree = view(state({ kind: 'in-progress', ...ready }), en, handlers())
+    assert.equal(findAll(tree, byKey('skills:search')).length, 1)
+    assert.match(textOf(findAll(tree, byKey('skills:toggle'))[0]), /▸ All skills \(3\)/)
+    assert.deepEqual(skillNames(tree), [])
+  })
+
+  test('the spoiler unfolds every skill', () => {
+    const tree = view(state({ kind: 'in-progress', ...ready }, { skillsOpen: true }), en, handlers())
+    assert.deepEqual(skillNames(tree), ['aif-commit', 'aif-plan', 'aif-review'])
+  })
+
+  test('a query unfolds the list and matches names and descriptions', () => {
+    const byName = view(state({ kind: 'in-progress', ...ready }, { skillsQuery: 'plan' }), en, handlers())
+    assert.deepEqual(skillNames(byName), ['aif-plan'])
+    assert.match(textOf(findAll(byName, byKey('skills:toggle'))[0]), /Found: 1 \/ 3/)
+    const byDescription = view(state({ kind: 'in-progress', ...ready }, { skillsQuery: 'STAGED changes' }), en, handlers())
+    assert.deepEqual(skillNames(byDescription), ['aif-commit', 'aif-review'])
+    const none = view(state({ kind: 'in-progress', ...ready }, { skillsQuery: 'kubernetes' }), panelTexts('ru'), handlers())
+    assert.match(textOf(none), /Ничего не найдено/)
+  })
+
+  test('a skill name opens its SKILL.md', () => {
+    const h = handlers()
+    const tree = view(state({ kind: 'in-progress', ...ready }, { skillsOpen: true }), en, h)
+    findAll(tree, (node) => node.attrs.title === '.claude/skills/aif-plan/SKILL.md')[0].on.click(new Event('click'))
+    assert.deepEqual(h.opened, ['.claude/skills/aif-plan/SKILL.md'])
+  })
 })

@@ -33,6 +33,7 @@ export function openablePaths(status: AifStatus): Set<string> {
   if (status.plan) paths.add(status.plan.path)
   if (status.roadmap) paths.add(status.roadmap.path)
   for (const candidate of status.candidates) paths.add(candidate)
+  for (const skill of status.skills) paths.add(skill.path)
   return paths
 }
 

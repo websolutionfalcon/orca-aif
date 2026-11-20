@@ -5,8 +5,9 @@ import { readdir, readFile, realpath, stat } from 'node:fs/promises'
 import { isAbsolute, join, relative, resolve } from 'node:path'
 import { CONFIG_PATH, resolveConfig } from '../core/config.ts'
 import { countUltraMarkers, discoverPlan, type PlansDirEntry } from '../core/plans.ts'
+import { isAifSkill, parseSkillFile, skillDirsOf } from '../core/skills.ts'
 import type { StatusInput } from '../core/status.ts'
-import type { AifConfig, ArtifactEntry, ArtifactKey, WorkspaceRef } from '../core/types.ts'
+import type { AifConfig, ArtifactEntry, ArtifactKey, SkillInfo, WorkspaceRef } from '../core/types.ts'
 import type { Logger } from './log.ts'
 import type { ListedWorkspace, WorkspaceContext } from './orcaHost.ts'
 
@@ -158,6 +159,20 @@ export class WorkspaceReader {
     return entries
   }
 
+  /** Names of the direct sub-folders of a workspace-relative folder (empty when missing). */
+  async listDirs(rel: string): Promise<string[]> {
+    const absolute = await this.resolve(rel)
+    if (!absolute) return []
+    try {
+      return (await readdir(absolute, { withFileTypes: true }))
+        .filter((dirent) => dirent.isDirectory() && !dirent.name.startsWith('.'))
+        .map((dirent) => dirent.name)
+    } catch (error) {
+      if (isMissing(error)) return []
+      throw error
+    }
+  }
+
   /** mtime and size of a path, `-` when missing; used for change detection. */
   async signature(rel: string): Promise<string> {
     const absolute = await this.resolve(rel)
@@ -170,6 +185,28 @@ export class WorkspaceReader {
       throw error
     }
   }
+}
+
+/** AI Factory skills (`aif`, `aif-*`) in the agents' skills folders, de-duplicated by name. */
+export async function readSkills(reader: WorkspaceReader, installJson: string | null, log: Logger): Promise<SkillInfo[]> {
+  const byName = new Map<string, SkillInfo>()
+  for (const dir of skillDirsOf(installJson)) {
+    for (const folder of await reader.listDirs(dir)) {
+      if (!isAifSkill(folder)) continue
+      const path = `${dir}/${folder}/SKILL.md`
+      const text = await reader.readText(path)
+      if (text === null) continue
+      const skill = parseSkillFile(text, path)
+      if (!skill || !isAifSkill(skill.name)) {
+        log.debug('skills', 'SKILL.md without an aif name skipped', { path })
+        continue
+      }
+      if (!byName.has(skill.name)) byName.set(skill.name, skill)
+    }
+  }
+  const skills = [...byName.values()].sort((a, b) => a.name.localeCompare(b.name))
+  log.debug('skills', 'skills read', { count: skills.length })
+  return skills
 }
 
 const ARTIFACTS: { key: ArtifactKey; path: (config: AifConfig) => string }[] = [
@@ -211,6 +248,7 @@ export async function readWorkspace(ref: WorkspaceRef & { path: string }, log: L
     candidates: discovery.candidates.length
   })
 
+  const installJson = await reader.readText(INSTALL_JSON)
   return {
     workspace: ref,
     installed,
@@ -219,7 +257,8 @@ export async function readWorkspace(ref: WorkspaceRef & { path: string }, log: L
     discovery,
     planText: discovery.plan ? await reader.readText(discovery.plan.path) : null,
     roadmapText: installed ? await reader.readText(config.paths.roadmap) : null,
-    installJson: await reader.readText(INSTALL_JSON),
+    installJson,
+    skills: installed ? await readSkills(reader, installJson, log) : [],
     warnings: reader.warnings
   }
 }
@@ -243,6 +282,8 @@ export async function fingerprintWorkspace(root: string, log: Logger): Promise<s
     config.paths.fixPlan,
     config.paths.plans
   ]
+  // Skills folders: their mtime changes when a skill is added or removed.
+  for (const dir of skillDirsOf(await reader.readText(INSTALL_JSON))) paths.push(dir)
   const plansDir = config.paths.plans.replace(/\/+$/, '')
   for (const entry of await reader.listPlans(config)) {
     paths.push(entry.isDir ? join(plansDir, entry.name, 'index.md') : join(plansDir, entry.name))

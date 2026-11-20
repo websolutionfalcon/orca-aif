@@ -4,7 +4,7 @@ import { texts } from './i18n.ts'
 import type { DiscoveryResult } from './plans.ts'
 import { parsePlan } from './plans.ts'
 import { parseRoadmap } from './roadmap.ts'
-import type { AifConfig, AifStatus, ArtifactEntry, WorkspaceRef } from './types.ts'
+import type { AifConfig, AifStatus, ArtifactEntry, SkillInfo, WorkspaceRef } from './types.ts'
 
 export interface StatusInput {
   workspace: WorkspaceRef
@@ -20,6 +20,8 @@ export interface StatusInput {
   installJson: string | null
   /** Problems the worker met while reading (file too large, outside the workspace, …). */
   warnings: string[]
+  /** AI Factory skills the worker found; empty when none. */
+  skills?: SkillInfo[]
 }
 
 /** Agent ids listed in `.ai-factory.json` (`agents[].id`). */
@@ -56,6 +58,7 @@ export function buildStatus(input: StatusInput): AifStatus {
     candidates: discovery.candidates,
     roadmap,
     installedAgents: installedAgentsOf(input.installJson),
+    skills: input.skills ?? [],
     warnings
   }
   if (discovery.reason === 'ambiguous') return { kind: 'ambiguous', ...ready }

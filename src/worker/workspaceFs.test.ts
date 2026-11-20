@@ -121,3 +121,16 @@ test('fingerprint changes when a plan changes, watcher fires once', async () => 
   watcher.stop()
   assert.equal(changes, 1)
 })
+
+test('reads AI Factory skills from the agents skills folders', async () => {
+  await write('.ai-factory.json', '{"agents":[{"id":"claude","skillsDir":".claude/skills"},{"id":"codex","skillsDir":".agents/skills"}]}')
+  await write('.claude/skills/aif-plan/SKILL.md', '---\nname: aif-plan\ndescription: Plan things.\n---\n')
+  await write('.claude/skills/orca-cli/SKILL.md', '---\nname: orca-cli\ndescription: Not AI Factory.\n---\n')
+  await write('.agents/skills/aif-plan/SKILL.md', '---\nname: aif-plan\ndescription: Duplicate for Codex.\n---\n')
+  await write('.agents/skills/aif-commit/SKILL.md', '---\nname: aif-commit\ndescription: Commit.\n---\n')
+  const input = await readWorkspace(ref(), log())
+  assert.deepEqual(input.skills?.map((skill) => [skill.name, skill.path]), [
+    ['aif-commit', '.agents/skills/aif-commit/SKILL.md'],
+    ['aif-plan', '.claude/skills/aif-plan/SKILL.md']
+  ])
+})

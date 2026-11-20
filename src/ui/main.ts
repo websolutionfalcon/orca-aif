@@ -90,6 +90,12 @@ const handlers = {
   toggleDone(): void {
     dispatch({ type: 'toggleDone' })
   },
+  skillsSearch(query: string): void {
+    dispatch({ type: 'skillsQuery', query })
+  },
+  toggleSkills(): void {
+    dispatch({ type: 'toggleSkills' })
+  },
   argInput(command: PanelCommand, value: string): void {
     args.set(command.id, value)
   },

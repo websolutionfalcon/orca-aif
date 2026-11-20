@@ -2,6 +2,7 @@
 import type { AifStatus, PlanInfo, ReadyStatus } from '../core/types.ts'
 import type { PanelCommand } from '../protocol.ts'
 import { h, type VNode } from './dom.ts'
+import { filterSkills } from './skills.ts'
 import type { PanelTexts } from './i18n.ts'
 import type { PanelState } from './state.ts'
 
@@ -11,6 +12,8 @@ export interface ViewHandlers {
   open(path: string): void
   dismiss(): void
   toggleDone(): void
+  skillsSearch(query: string): void
+  toggleSkills(): void
   argInput(command: PanelCommand, value: string): void
   argValue(command: PanelCommand): string
 }
@@ -236,6 +239,57 @@ function commandsCard(commands: PanelCommand[], state: PanelState, t: PanelTexts
   )
 }
 
+function skillsCard(status: Ready, state: PanelState, t: PanelTexts, handlers: ViewHandlers): VNode {
+  const all = status.skills
+  const query = state.skillsQuery.trim()
+  const found = filterSkills(all, query)
+  const open = query !== '' || state.skillsOpen
+  const summary = query !== '' ? `${t.skillsFound}: ${found.length} / ${all.length}` : `${t.skillsAll} (${all.length})`
+  return card(
+    t.skills,
+    h('input', {
+      class: 'search',
+      attrs: { type: 'search', 'data-key': 'skills:search', value: state.skillsQuery, placeholder: t.skillsSearch, 'aria-label': t.skillsSearch, maxlength: 200 },
+      on: {
+        input: (event) => handlers.skillsSearch((event.target as HTMLInputElement).value),
+        keydown: (event) => {
+          if ((event as KeyboardEvent).key === 'Escape') handlers.skillsSearch('')
+        }
+      }
+    }),
+    h(
+      'button',
+      {
+        class: 'link subtle spoiler',
+        attrs: { type: 'button', 'data-key': 'skills:toggle', 'aria-expanded': open, disabled: query !== '' },
+        on: { click: () => handlers.toggleSkills() }
+      },
+      `${open ? '▾' : '▸'} ${summary}`
+    ),
+    open
+      ? found.length === 0
+        ? h('p', { class: 'subtle' }, all.length === 0 ? t.skillsNone : t.skillsNothing)
+        : h(
+            'ul',
+            { class: 'skills' },
+            found.map((skill) =>
+              h(
+                'li',
+                { attrs: { 'data-key': `skill:${skill.name}` } },
+                h(
+                  'div',
+                  { class: 'row' },
+                  h('button', { class: 'link skill-name', attrs: { type: 'button', title: skill.path }, on: { click: () => handlers.open(skill.path) } }, `/${skill.name}`),
+                  skill.argumentHint ? h('code', { class: 'subtle hint', attrs: { title: skill.argumentHint } }, skill.argumentHint) : null
+                ),
+                skill.description ? h('div', { class: 'subtle clamp', attrs: { title: skill.description } }, skill.description) : null
+              )
+            )
+          )
+      : null
+  )
+}
+
 export function view(state: PanelState, t: PanelTexts, handlers: ViewHandlers): VNode {
   const status = state.status
   const parts: (VNode | null)[] = [header(state, t, handlers), notice(state, handlers)]
@@ -263,7 +317,8 @@ export function view(state: PanelState, t: PanelTexts, handlers: ViewHandlers): 
       contextCard(status, t, handlers),
       status.warnings.length > 0
         ? card(t.warnings, h('ul', null, status.warnings.map((warning) => h('li', { class: 'subtle' }, warning))))
-        : null
+        : null,
+      skillsCard(status, state, t, handlers)
     )
   }
   return h('div', { class: 'root' }, ...parts)
