@@ -425,3 +425,31 @@ code {
   font-size: 11px;
   color: var(--orca-muted-foreground);
 }
+
+.milestones li {
+  align-items: center;
+}
+
+.milestone-plan {
+  margin-left: auto;
+  flex: none;
+  border: 1px solid var(--orca-border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--orca-muted-foreground);
+  font-size: 10.5px;
+  line-height: 1.3;
+  padding: 1px 7px;
+  opacity: 0.75;
+}
+
+.milestones li:hover .milestone-plan,
+.milestone-plan:focus-visible {
+  opacity: 1;
+}
+
+.milestone-plan:hover:not(:disabled) {
+  background: var(--orca-accent);
+  color: var(--orca-accent-foreground);
+  border-color: transparent;
+}

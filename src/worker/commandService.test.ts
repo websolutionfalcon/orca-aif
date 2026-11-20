@@ -186,10 +186,10 @@ describe('draft (New button)', () => {
     assert.deepEqual(calls.focused, ['t1'])
   })
 
-  test('a typed argument is ignored in draft mode', async () => {
+  test('a draft keeps its argument, sanitized, and still has no Enter', async () => {
     const { service, calls } = setup([codex])
-    await service.run({ command: 'roadmap', argument: 'check', source: 'panel', draft: true })
-    assert.deepEqual(calls.sent, [{ terminalId: 't2', text: '$aif-roadmap ', enter: false }])
+    await service.run({ command: 'plan', argument: 'Billing\n— invoices', source: 'panel', draft: true })
+    assert.deepEqual(calls.sent, [{ terminalId: 't2', text: '$aif-plan Billing — invoices ', enter: false }])
   })
 
   test('no agent: launches one without a prompt, then types the draft without Enter once ready', async () => {

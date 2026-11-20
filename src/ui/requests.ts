@@ -8,5 +8,5 @@ export function commandRunInput(
   draft = false
 ): { command: AifCommandId; argument?: string; draft?: boolean } {
   const argument = rawArgument?.trim()
-  return { command, ...(argument && !draft ? { argument } : {}), ...(draft ? { draft: true } : {}) }
+  return { command, ...(argument ? { argument } : {}), ...(draft ? { draft: true } : {}) }
 }

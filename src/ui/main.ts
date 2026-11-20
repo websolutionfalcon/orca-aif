@@ -48,9 +48,9 @@ async function load(): Promise<void> {
 }
 
 /** Sends a catalog command; `draft` types it without Enter for the user's own prompt. */
-function send(command: PanelCommand, draft: boolean): void {
+function send(command: PanelCommand, draft: boolean, argumentOverride?: string): void {
   if (state.pending) return
-  const argument = draft ? undefined : args.get(command.id)?.trim() || undefined
+  const argument = argumentOverride ?? (draft ? undefined : args.get(command.id)?.trim() || undefined)
   dispatch({ type: 'pending', command: command.id })
   void (async () => {
     try {
@@ -84,8 +84,8 @@ const handlers = {
   run(command: PanelCommand): void {
     send(command, false)
   },
-  draft(command: PanelCommand): void {
-    send(command, true)
+  draft(command: PanelCommand, argument?: string): void {
+    send(command, true, argument)
   },
   open(path: string): void {
     void orca.plugin.request('file.open', { path }).then(

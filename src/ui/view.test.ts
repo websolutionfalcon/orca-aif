@@ -32,7 +32,10 @@ const ready: ReadyStatus = {
   candidates: [],
   roadmap: {
     path: '.ai-factory/ROADMAP.md',
-    milestones: [{ name: 'Auth', description: 'x', done: false }],
+    milestones: [
+      { name: 'Catalog', description: 'product pages', done: true },
+      { name: 'Auth', description: 'login and sessions', done: false }
+    ],
     done: 0,
     total: 1,
     next: null
@@ -61,7 +64,7 @@ function handlers(): ViewHandlers & { opened: string[]; ran: string[]; drafted: 
     opened,
     ran,
     drafted,
-    draft: (command) => drafted.push(command.id),
+    draft: (command, argument) => drafted.push(argument ? `${command.id}:${argument}` : command.id),
     refresh: () => undefined,
     run: (command) => ran.push(command.id),
     open: (path) => opened.push(path),
@@ -292,4 +295,14 @@ describe('context card', () => {
     assert.equal(findAll(open, byClass('artifacts')).length, 1)
     assert.equal(findAll(open, byKey('context:toggle'))[0].attrs['aria-expanded'], 'true')
   })
+})
+
+test('unfinished milestones get a Plan button that drafts /aif-plan for that milestone', () => {
+  const h = handlers()
+  const tree = view(state({ kind: 'in-progress', ...ready }), en, h)
+  assert.equal(findAll(tree, byKey('plan-milestone:Catalog')).length, 0, 'done milestones have none')
+  const button = findAll(tree, byKey('plan-milestone:Auth'))[0]
+  assert.equal(textOf(button), 'Plan')
+  button.on.click(new Event('click'))
+  assert.deepEqual(h.drafted, ['plan:Auth — login and sessions'])
 })

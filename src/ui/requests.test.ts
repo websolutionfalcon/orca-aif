@@ -18,3 +18,7 @@ test('draft flag is sent only when set', () => {
   assert.deepEqual(commandRunInput('plan', undefined, true), { command: 'plan', draft: true })
   assert.deepEqual(commandRunInput('plan', undefined, false), { command: 'plan' })
 })
+
+test('a draft carries its argument too', () => {
+  assert.deepEqual(commandRunInput('plan', 'Billing', true), { command: 'plan', argument: 'Billing', draft: true })
+})

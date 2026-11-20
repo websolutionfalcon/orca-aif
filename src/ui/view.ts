@@ -13,7 +13,8 @@ export interface ViewHandlers {
   dismiss(): void
   toggleDone(): void
   toggleContext(): void
-  draft(command: PanelCommand): void
+  /** Types the command (and an optional argument) without Enter, for the user's own prompt. */
+  draft(command: PanelCommand, argument?: string): void
   skillsSearch(query: string): void
   toggleSkills(): void
   argInput(command: PanelCommand, value: string): void
@@ -256,6 +257,7 @@ function planCard(status: Ready, state: PanelState, t: PanelTexts, handlers: Vie
 function roadmapCard(status: Ready, state: PanelState, t: PanelTexts, handlers: ViewHandlers): VNode | null {
   const roadmap = status.roadmap
   if (!roadmap || roadmap.total === 0) return null
+  const plan = state.commands.find((command) => command.id === 'plan')
   return headedCard(
     t.roadmap,
     { key: 'roadmap', action: newButton('roadmap', state, t, handlers) },
@@ -269,7 +271,23 @@ function roadmapCard(status: Ready, state: PanelState, t: PanelTexts, handlers: 
           'li',
           { class: [milestone.done ? 'done' : '', milestone === roadmap.next ? 'next' : ''].filter(Boolean).join(' ') || undefined },
           h('span', { class: 'mark' }, milestone.done ? '✓' : milestone === roadmap.next ? '▶' : '○'),
-          h('span', { class: 'text', attrs: { title: milestone.description || undefined } }, milestone.name)
+          h('span', { class: 'text', attrs: { title: milestone.description || undefined } }, milestone.name),
+          milestone.done || !plan
+            ? null
+            : h(
+                'button',
+                {
+                  class: 'milestone-plan',
+                  attrs: {
+                    type: 'button',
+                    'data-key': `plan-milestone:${milestone.name}`,
+                    title: `${t.planMilestone}: ${plan.label} ${milestone.name} …`,
+                    disabled: state.pending !== null
+                  },
+                  on: { click: () => handlers.draft(plan, milestone.description ? `${milestone.name} — ${milestone.description}` : milestone.name) }
+                },
+                t.planShort
+              )
         )
       )
     )

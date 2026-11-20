@@ -5,7 +5,7 @@
 //   agent running + required arg missing, from the palette
 //                                      → type `/aif-x ` without Enter, focus   → 'typed'
 //   required arg missing otherwise     → refused with a message
-import { buildCommandText, findCommand, prefixFor } from '../core/commands.ts'
+import { buildCommandText, findCommand, prefixFor, sanitizeArgument } from '../core/commands.ts'
 import { messageOf, type Logger } from './log.ts'
 import type { ListedAgent, OrcaHost } from './orcaHost.ts'
 import type { Settings } from './settings.ts'
@@ -128,7 +128,9 @@ export function createCommandService(deps: CommandServiceDeps) {
       const prefix = prefixFor(agent?.agent ?? settings.defaultAgent, settings.commandPrefix)
       const built = buildCommandText(command.id, prefix, input.argument)
       const asDraft = input.draft === true
-      const draftText = `${prefix}${command.skill} `
+      // A draft ends with a space so the user keeps typing; a given argument comes first.
+      const draftArgument = asDraft && command.arg !== 'none' ? sanitizeArgument(input.argument) : undefined
+      const draftText = draftArgument ? `${prefix}${command.skill} ${draftArgument} ` : `${prefix}${command.skill} `
 
       if (agent) {
         if (built.ok && !asDraft) {
