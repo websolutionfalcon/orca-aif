@@ -31,3 +31,10 @@ test('a status.changed payload replaces both status and command buttons', () => 
   })
   assert.equal(after.commands[0].label, '$aif-plan')
 })
+
+test('refreshing ends when a status or a failure arrives', () => {
+  const busy = reduce(INITIAL_STATE, { type: 'refreshing' })
+  assert.equal(busy.refreshing, true)
+  assert.equal(reduce(busy, { type: 'status', status: { kind: 'no-workspace' } }).refreshing, false)
+  assert.equal(reduce(busy, { type: 'failed', lead: 'x', message: 'y' }).refreshing, false)
+})

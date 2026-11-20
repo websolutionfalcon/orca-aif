@@ -35,9 +35,13 @@ export function h(tag: string, props: Props | null, ...children: Child[]): VNode
   return { tag, attrs, on: props?.on ?? {}, children: flatten(children, []) }
 }
 
-export function render(node: VNode | string, doc: Document): Node {
+const SVG_NS = 'http://www.w3.org/2000/svg'
+
+/** `inSvg` is set for children of an `<svg>`: they need the SVG namespace to draw. */
+export function render(node: VNode | string, doc: Document, inSvg = false): Node {
   if (typeof node === 'string') return doc.createTextNode(node)
-  const element = doc.createElement(node.tag)
+  const svg = inSvg || node.tag === 'svg'
+  const element = svg ? doc.createElementNS(SVG_NS, node.tag) : doc.createElement(node.tag)
   for (const [name, value] of Object.entries(node.attrs)) {
     if (name === 'value' && 'value' in element) (element as HTMLInputElement).value = value
     // Through CSSOM: a frame's CSP may refuse inline style attributes, never element.style.
@@ -45,7 +49,7 @@ export function render(node: VNode | string, doc: Document): Node {
     else element.setAttribute(name, value)
   }
   for (const [event, handler] of Object.entries(node.on)) element.addEventListener(event, handler)
-  for (const child of node.children) element.appendChild(render(child, doc))
+  for (const child of node.children) element.appendChild(render(child, doc, svg))
   return element
 }
 

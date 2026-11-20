@@ -212,3 +212,13 @@ describe('skills library', () => {
     assert.deepEqual(h.opened, ['.claude/skills/aif-plan/SKILL.md'])
   })
 })
+
+test('refresh is a compact icon button with an accessible label, spinning while it runs', () => {
+  const idle = findAll(view(state({ kind: 'no-workspace' }), en, handlers()), byKey('refresh'))[0]
+  assert.equal(idle.attrs.class, 'icon-btn')
+  assert.equal(idle.attrs['aria-label'], 'Refresh')
+  assert.equal(textOf(idle), '')
+  assert.equal((idle.children[0] as { tag: string }).tag, 'svg')
+  const busy = findAll(view(state({ kind: 'no-workspace' }, { refreshing: true }), en, handlers()), byKey('refresh'))[0]
+  assert.equal(busy.attrs.class, 'icon-btn spinning')
+})

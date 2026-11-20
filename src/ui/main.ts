@@ -48,6 +48,8 @@ async function load(): Promise<void> {
 
 const handlers = {
   refresh(): void {
+    if (state.refreshing) return
+    dispatch({ type: 'refreshing' })
     void (async () => {
       try {
         const answer = await orca.plugin.request('status.refresh')

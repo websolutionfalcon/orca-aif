@@ -22,6 +22,8 @@ export interface PanelState {
   skillsQuery: string
   /** Skills library unfolded with an empty query. */
   skillsOpen: boolean
+  /** A manual refresh is running (the refresh icon spins). */
+  refreshing: boolean
 }
 
 export const INITIAL_STATE: PanelState = {
@@ -32,7 +34,8 @@ export const INITIAL_STATE: PanelState = {
   notice: null,
   showDone: false,
   skillsQuery: '',
-  skillsOpen: false
+  skillsOpen: false,
+  refreshing: false
 }
 
 export type Action =
@@ -45,19 +48,22 @@ export type Action =
   | { type: 'toggleDone' }
   | { type: 'skillsQuery'; query: string }
   | { type: 'toggleSkills' }
+  | { type: 'refreshing' }
 
 export function reduce(state: PanelState, action: Action): PanelState {
   switch (action.type) {
     case 'loaded':
-      return { ...state, loading: false, status: action.status, commands: action.commands }
+      return { ...state, loading: false, refreshing: false, status: action.status, commands: action.commands }
     case 'status':
-      return { ...state, loading: false, status: action.status }
+      return { ...state, loading: false, refreshing: false, status: action.status }
+    case 'refreshing':
+      return { ...state, refreshing: true }
     case 'pending':
       return { ...state, pending: action.command, notice: null }
     case 'commandDone':
       return { ...state, pending: null, notice: { kind: 'ok', lead: action.lead, detail: action.text } }
     case 'failed':
-      return { ...state, loading: false, pending: null, notice: { kind: 'error', lead: action.lead, detail: action.message } }
+      return { ...state, loading: false, refreshing: false, pending: null, notice: { kind: 'error', lead: action.lead, detail: action.message } }
     case 'dismiss':
       return { ...state, notice: null }
     case 'toggleDone':

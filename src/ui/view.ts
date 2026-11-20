@@ -64,6 +64,16 @@ function progress(done: number, total: number): VNode {
   )
 }
 
+/** Circular arrow, drawn with the current text colour. */
+function refreshIcon(): VNode {
+  return h(
+    'svg',
+    { attrs: { viewBox: '0 0 24 24', width: 15, height: 15, fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' } },
+    h('path', { attrs: { d: 'M20 12a8 8 0 1 1-2.34-5.66' } }),
+    h('path', { attrs: { d: 'M20 4v4.5h-4.5' } })
+  )
+}
+
 function header(state: PanelState, t: PanelTexts, handlers: ViewHandlers): VNode {
   const status = state.status
   const workspace = status && 'workspace' in status ? status.workspace : null
@@ -73,7 +83,15 @@ function header(state: PanelState, t: PanelTexts, handlers: ViewHandlers): VNode
     'header',
     { class: 'header' },
     h('div', null, h('h1', null, t.title), where ? h('div', { class: 'subtle' }, where) : null),
-    h('button', { class: 'btn', attrs: { type: 'button', 'data-key': 'refresh' }, on: { click: () => handlers.refresh() } }, t.refresh)
+    h(
+      'button',
+      {
+        class: `icon-btn${state.refreshing ? ' spinning' : ''}`,
+        attrs: { type: 'button', 'data-key': 'refresh', title: t.refresh, 'aria-label': t.refresh, 'aria-busy': state.refreshing },
+        on: { click: () => handlers.refresh() }
+      },
+      refreshIcon()
+    )
   )
 }
 

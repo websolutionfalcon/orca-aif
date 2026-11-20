@@ -310,3 +310,38 @@ code {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--orca-muted-foreground);
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: var(--orca-accent);
+  color: var(--orca-accent-foreground);
+}
+
+.icon-btn.spinning svg {
+  animation: aif-spin 0.8s linear infinite;
+}
+
+@keyframes aif-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon-btn.spinning svg {
+    animation: none;
+  }
+}
