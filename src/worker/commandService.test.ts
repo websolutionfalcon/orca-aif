@@ -209,3 +209,74 @@ describe('draft (New button)', () => {
     assert.deepEqual(calls.sent, [])
   })
 })
+
+describe('launching in the user\'s Chat | CLI mode', () => {
+  type Launch = { agent: string; workspacePath: string; prompt?: string }
+  function launcherSetup(surface: 'chat' | 'terminal', screenHas = true) {
+    const launches: Launch[] = []
+    const base = setup([], {}, true, async () => undefined)
+    const service = createCommandService({
+      host: {
+        listAgents: async () => [],
+        sendText: async (terminalId: string, text: string, enter: boolean) => {
+          base.calls.sent.push({ terminalId, text, enter })
+          return true
+        },
+        launchAgent: async () => {
+          throw new Error('host launch must not be used when the CLI launcher is available')
+        },
+        focusTerminal: async () => true,
+        notify: async () => undefined
+      } as unknown as OrcaHost,
+      log: createLogger({ log: () => undefined }, () => 'debug'),
+      settings: () => DEFAULT_SETTINGS,
+      workspaceId: async () => 'w1',
+      workspacePath: () => '/work/repo',
+      waitForIdle: async () => undefined,
+      launcher: async (input) => {
+        launches.push(input)
+        return { surface, terminalId: surface === 'terminal' ? 'term-cli' : null }
+      },
+      screenHas: async () => screenHas
+    })
+    return { service, launches, sent: base.calls.sent }
+  }
+
+  test('chat mode, run: the command goes into the new chat as its prompt', async () => {
+    const { service, launches, sent } = launcherSetup('chat')
+    const result = await service.run({ command: 'rules', source: 'panel' })
+    assert.deepEqual(result, { ok: true, action: 'launched', terminalId: null, text: '/aif-rules' })
+    assert.deepEqual(launches, [{ agent: 'claude', workspacePath: '/work/repo', prompt: '/aif-rules' }])
+    assert.deepEqual(sent, [])
+  })
+
+  test('chat mode, draft: a chat opens without a prompt and the panel is told to paste', async () => {
+    const { service, launches } = launcherSetup('chat')
+    const result = await service.run({ command: 'plan', argument: 'Billing', source: 'panel', draft: true })
+    assert.deepEqual(result, { ok: true, action: 'chat', terminalId: null, text: '/aif-plan Billing ' })
+    assert.deepEqual(launches, [{ agent: 'claude', workspacePath: '/work/repo', prompt: undefined }])
+  })
+
+  test('terminal mode, run: when the launch prompt shows up nothing is typed again', async () => {
+    const { service, launches, sent } = launcherSetup('terminal', true)
+    await service.run({ command: 'rules', source: 'panel' })
+    await service.settled()
+    assert.equal(launches[0].prompt, '/aif-rules')
+    assert.deepEqual(sent, [])
+  })
+
+  test('terminal mode, run: a lost launch prompt is typed with Enter once the agent is idle', async () => {
+    const { service, sent } = launcherSetup('terminal', false)
+    await service.run({ command: 'rules', source: 'panel' })
+    await service.settled()
+    assert.deepEqual(sent, [{ terminalId: 'term-cli', text: '/aif-rules', enter: true }])
+  })
+
+  test('terminal mode, draft: launched without a prompt, typed without Enter', async () => {
+    const { service, launches, sent } = launcherSetup('terminal')
+    await service.run({ command: 'roadmap', source: 'panel', draft: true })
+    await service.settled()
+    assert.equal(launches[0].prompt, undefined)
+    assert.deepEqual(sent, [{ terminalId: 'term-cli', text: '/aif-roadmap ', enter: false }])
+  })
+})

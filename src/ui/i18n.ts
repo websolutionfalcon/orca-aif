@@ -42,6 +42,9 @@ const EN = {
   sent: 'Sent',
   launched: 'Started an agent with',
   typed: 'Typed into the agent terminal',
+  chat: 'Chat opened',
+  chatCopied: 'Chat opened — command copied, paste it with ⌘V',
+  chatType: 'Chat opened — type',
   failed: 'Failed',
   artifacts: {
     config: 'config.yaml',
@@ -100,6 +103,9 @@ const RU: PanelTexts = {
   sent: 'Отправлено',
   launched: 'Запущен агент с',
   typed: 'Вставлено в терминал агента',
+  chat: 'Открыт чат',
+  chatCopied: 'Открыт чат — команда скопирована, вставьте ⌘V',
+  chatType: 'Открыт чат — введите',
   failed: 'Ошибка',
   artifacts: {
     config: 'config.yaml',

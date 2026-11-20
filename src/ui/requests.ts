@@ -10,3 +10,9 @@ export function commandRunInput(
   const argument = rawArgument?.trim()
   return { command, ...(argument ? { argument } : {}), ...(draft ? { draft: true } : {}) }
 }
+
+/** The text a draft types: the command label, the argument if any, and a trailing space. */
+export function draftText(label: string, argument: string | undefined): string {
+  const extra = argument?.replace(/\s+/g, ' ').trim()
+  return extra ? `${label} ${extra} ` : `${label} `
+}

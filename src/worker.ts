@@ -9,7 +9,7 @@ import type { Outcome, PanelCommand } from './protocol.ts'
 import { createCommandService, pickAgent } from './worker/commandService.ts'
 import { createLogger, messageOf, type Logger } from './worker/log.ts'
 import { createOrcaHost } from './worker/orcaHost.ts'
-import { openOwnPanel, pluginKeyFromLocation, runOrcaCli } from './worker/orcaCli.ts'
+import { launchAgentTab, openOwnPanel, pluginKeyFromLocation, runOrcaCli, terminalShows } from './worker/orcaCli.ts'
 import { DEFAULT_SETTINGS, parseSettings, type Settings } from './worker/settings.ts'
 import { createStatusService } from './worker/statusService.ts'
 import { createWatcher, type Watcher } from './worker/watcher.ts'
@@ -70,6 +70,13 @@ export default function activate(orca: OrcaWorkerApi): void {
         : async (terminalId: string) => {
             await runOrcaCli(['terminal', 'wait', '--terminal', terminalId, '--for', 'tui-idle', '--timeout-ms', '90000'], 100_000)
           },
+    // New agents open the way the user set Orca up (Chat | CLI), through `orca agent launch`.
+    launcher: process.env.AIF_DISABLE_CLI === '1' ? undefined : (input) => launchAgentTab(runOrcaCli, input),
+    workspacePath: () => {
+      const workspace = status.workspace()
+      return workspace?.path && !isRemote(workspace) ? workspace.path : null
+    },
+    screenHas: (terminalId, text) => terminalShows(runOrcaCli, terminalId, text),
     workspaceId: async () => {
       const known = status.workspace()?.id
       if (known) return known

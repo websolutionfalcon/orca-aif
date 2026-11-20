@@ -22,7 +22,8 @@ export interface PanelAgent {
   stateStartedAt: number
 }
 
-export type CommandAction = 'sent' | 'launched' | 'typed'
+/** `chat`: a chat opened for a draft; the panel copies the text for the user to paste. */
+export type CommandAction = 'sent' | 'launched' | 'typed' | 'chat'
 
 declare module 'orca' {
   interface PluginRequests {
@@ -33,7 +34,7 @@ declare module 'orca' {
     /** Sends a catalog command (with an optional argument) to the workspace agent. */
     'command.run': {
       input: { command: AifCommandId; argument?: string; draft?: boolean }
-      output: Outcome<{ action: CommandAction; terminalId: string; text: string }>
+      output: Outcome<{ action: CommandAction; terminalId: string | null; text: string }>
     }
     /** Opens one of the artifacts the current status lists, in Orca's editor. */
     'file.open': { input: { path: string }; output: Outcome<{ path: string }> }

@@ -1,5 +1,5 @@
 import { assert, test } from 'orca/testing'
-import { commandRunInput } from './requests.ts'
+import { commandRunInput, draftText } from './requests.ts'
 
 // Orca validates plugin.request input as JSON: an `undefined` field is refused with
 // `invalid_params: input: Invalid input`, so an absent argument must be left out entirely.
@@ -21,4 +21,9 @@ test('draft flag is sent only when set', () => {
 
 test('a draft carries its argument too', () => {
   assert.deepEqual(commandRunInput('plan', 'Billing', true), { command: 'plan', argument: 'Billing', draft: true })
+})
+
+test('draft text for the clipboard', () => {
+  assert.equal(draftText('/aif-plan', undefined), '/aif-plan ')
+  assert.equal(draftText('$aif-plan', ' Billing\n— invoices '), '$aif-plan Billing — invoices ')
 })

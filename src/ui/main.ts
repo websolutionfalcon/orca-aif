@@ -1,7 +1,7 @@
 // Panel entry (panel/index.html loads it). Talks to the worker only through src/protocol.ts.
 import type { PanelCommand } from '../protocol.ts'
 import { render } from './dom.ts'
-import { commandRunInput } from './requests.ts'
+import { commandRunInput, draftText } from './requests.ts'
 import { panelTexts } from './i18n.ts'
 import { INITIAL_STATE, reduce, type Action, type CardKey, type PanelState } from './state.ts'
 
@@ -67,9 +67,25 @@ async function load(): Promise<void> {
 }
 
 /** Sends a catalog command; `draft` types it without Enter for the user's own prompt. */
+/**
+ * Copies a draft while the click still counts as a user gesture (the clipboard needs one). Used
+ * when Orca opens the agent as a chat, whose input a plugin cannot fill.
+ */
+function copyDraft(text: string): Promise<boolean> {
+  try {
+    return navigator.clipboard.writeText(text).then(
+      () => true,
+      () => false
+    )
+  } catch {
+    return Promise.resolve(false)
+  }
+}
+
 function send(command: PanelCommand, draft: boolean, argumentOverride?: string): void {
   if (state.pending) return
   const argument = argumentOverride ?? (draft ? undefined : args.get(command.id)?.trim() || undefined)
+  const copied = draft ? copyDraft(draftText(command.label, argument)) : Promise.resolve(false)
   dispatch({ type: 'pending', command: command.id })
   void (async () => {
     try {
@@ -79,7 +95,8 @@ function send(command: PanelCommand, draft: boolean, argumentOverride?: string):
         return
       }
       if (!draft) args.delete(command.id)
-      dispatch({ type: 'commandDone', action: answer.action, text: answer.text.trim(), lead: t[answer.action] })
+      const lead = answer.action === 'chat' ? ((await copied) ? t.chatCopied : t.chatType) : t[answer.action]
+      dispatch({ type: 'commandDone', action: answer.action, text: answer.text.trim(), lead })
     } catch (error) {
       dispatch({ type: 'failed', lead: t.failed, message: errorText(error) })
     }
