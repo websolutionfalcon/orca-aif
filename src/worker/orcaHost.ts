@@ -53,7 +53,7 @@ export function createOrcaHost(orca: OrcaWorkerApi, log: Logger) {
     } catch (error) {
       const code = codeOf(error)
       const data = { method, code, ms: Date.now() - started, error: messageOf(error) }
-      if (code === 'not_permitted' || code === 'capability_denied') log.warn('host', 'call refused', data)
+      if (code === 'not_permitted' || code === 'capability_denied' || code === 'consent_required') log.warn('host', 'call refused', data)
       else log.error('host', 'call failed', data)
       throw error
     }

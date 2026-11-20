@@ -124,3 +124,22 @@ describe('regressions (review)', () => {
     assert.equal(calls.sent[0].terminalId, 'tw')
   })
 })
+
+describe('regressions (background launch)', () => {
+  test('a launched agent terminal is shown, not left in the background', async () => {
+    const { service, calls } = setup([])
+    const result = await service.run({ command: 'rules', source: 'panel' })
+    assert.ok(result.ok && result.action === 'launched')
+    assert.deepEqual(calls.focused, ['term-new'])
+  })
+
+  test('a second click while the agent is still starting does not launch another one', async () => {
+    const { service, calls } = setup([])
+    await service.run({ command: 'rules', source: 'panel' })
+    const again = await service.run({ command: 'rules', source: 'panel' })
+    assert.equal(calls.launched.length, 1)
+    assert.equal(again.ok, false)
+    assert.match(again.ok ? '' : again.error, /starting/)
+    assert.deepEqual(calls.focused, ['term-new', 'term-new'])
+  })
+})

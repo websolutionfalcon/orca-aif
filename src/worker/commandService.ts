@@ -29,7 +29,12 @@ export interface CommandServiceDeps {
   settings: () => Settings
   /** Id of the focused workspace (as `workspace.list` names it), or null. */
   workspaceId: () => Promise<string | null>
+  /** Clock for the "agent is starting" window; tests pass their own. */
+  now?: () => number
 }
+
+/** How long a just-launched agent counts as starting (before `agents.list` shows it). */
+export const STARTING_MS = 60_000
 
 const STATE_ORDER: ListedAgent['state'][] = ['waiting', 'done', 'working']
 
@@ -47,6 +52,19 @@ export function pickAgent(agents: ListedAgent[]): (ListedAgent & { terminalId: s
 
 export function createCommandService(deps: CommandServiceDeps) {
   const { host, log } = deps
+  const now = deps.now ?? (() => Date.now())
+  /** Agents launched per workspace that `agents.list` may not show yet. */
+  const starting = new Map<string, { terminalId: string; at: number }>()
+
+  /** Shows a terminal in Orca; a launched agent otherwise stays in a background tab. */
+  async function show(terminalId: string): Promise<boolean> {
+    try {
+      return await host.focusTerminal(terminalId)
+    } catch (error) {
+      log.warn('command', 'could not show the agent terminal', { terminal: terminalId, error: messageOf(error) })
+      return false
+    }
+  }
 
   async function run(input: RunCommandInput): Promise<RunCommandResult> {
     const settings = deps.settings()
@@ -68,6 +86,7 @@ export function createCommandService(deps: CommandServiceDeps) {
           log.warn('command', 'agents.list failed; starting a new agent', { error: messageOf(error) })
         }
         agent = pickAgent(agents)
+        if (agent) starting.clear()
         if (!agent && agents.some((candidate) => candidate.state === 'blocked' && candidate.terminalId)) {
           log.info('command', '[FIX:blocked-agent] refused: the only agent waits for a permission answer', { command: command.id })
           return refuse(command.id, 'the agent in this workspace is waiting for a permission answer; answer it first')
@@ -100,8 +119,16 @@ export function createCommandService(deps: CommandServiceDeps) {
       }
       const workspaceId = await deps.workspaceId()
       if (!workspaceId) return refuse(command.id, 'no workspace is focused')
+      const pending = starting.get(workspaceId)
+      if (settings.sendMode === 'agent-or-launch' && pending && now() - pending.at < STARTING_MS) {
+        await show(pending.terminalId)
+        log.info('command', '[FIX:double-launch] agent still starting; not launching another', { command: command.id, terminal: pending.terminalId })
+        return refuse(command.id, 'an agent is still starting in this workspace; wait until it is ready, then run the command again')
+      }
       const terminalId = await host.launchAgent(workspaceId, settings.defaultAgent, built.text)
-      log.info('command', `${command.id} -> launched`, { terminal: terminalId, agent: settings.defaultAgent, length: built.text.length })
+      starting.set(workspaceId, { terminalId, at: now() })
+      const shown = await show(terminalId)
+      log.info('command', `${command.id} -> launched`, { terminal: terminalId, agent: settings.defaultAgent, length: built.text.length, shown })
       return { ok: true, action: 'launched', terminalId, text: built.text }
     } catch (error) {
       log.error('command', 'failed', { command: command.id, error: messageOf(error) })
