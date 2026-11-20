@@ -469,3 +469,184 @@ code {
   opacity: 0.45;
   cursor: default;
 }
+
+/* ---------- Motion ---------- */
+:root {
+  --ease-out: cubic-bezier(0.22, 0.8, 0.22, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+button,
+.link,
+.card,
+.search,
+.command input {
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    opacity 0.16s ease,
+    transform 0.12s ease,
+    text-decoration-color 0.16s ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.link:active:not(:disabled),
+.card-toggle:active:not(:disabled) {
+  transform: none;
+}
+
+.card:hover {
+  border-color: color-mix(in srgb, var(--orca-border), var(--orca-foreground) 14%);
+}
+
+.search:focus {
+  border-color: var(--orca-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--orca-ring), transparent 78%);
+  outline: none;
+}
+
+/* First render: cards rise in one after another, progress bars fill. */
+@keyframes aif-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.root.enter > * {
+  animation: aif-rise 0.42s var(--ease-out) both;
+}
+
+.root.enter > :nth-child(2) { animation-delay: 40ms; }
+.root.enter > :nth-child(3) { animation-delay: 80ms; }
+.root.enter > :nth-child(4) { animation-delay: 120ms; }
+.root.enter > :nth-child(5) { animation-delay: 160ms; }
+.root.enter > :nth-child(6) { animation-delay: 200ms; }
+.root.enter > :nth-child(n + 7) { animation-delay: 240ms; }
+
+@keyframes aif-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.progress > div {
+  transform-origin: left center;
+}
+
+.root.enter .progress > div {
+  animation: aif-fill 0.8s var(--ease-out) 0.15s both;
+}
+
+/* Folding: the chevron turns, the body unrolls. */
+.chevron {
+  display: inline-block;
+  transition: transform 0.2s var(--ease-out);
+}
+
+.chevron.open {
+  transform: rotate(90deg);
+}
+
+@keyframes aif-turn-open {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(90deg); }
+}
+
+@keyframes aif-turn-close {
+  from { transform: rotate(90deg); }
+  to { transform: rotate(0deg); }
+}
+
+.card.opening .chevron {
+  animation: aif-turn-open 0.22s var(--ease-out);
+}
+
+.card.closing .chevron {
+  animation: aif-turn-close 0.22s var(--ease-out);
+}
+
+@keyframes aif-unroll {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(0 0 -12px 0);
+  }
+}
+
+.card.opening .card-body {
+  animation: aif-unroll 0.32s var(--ease-out) both;
+}
+
+/* A notice drops in. */
+@keyframes aif-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.banner {
+  cursor: pointer;
+}
+
+.banner.fresh {
+  animation: aif-drop 0.34s var(--ease-spring) both;
+}
+
+/* A command being sent breathes. */
+@keyframes aif-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--orca-primary), transparent 65%);
+  }
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--orca-primary), transparent 100%);
+  }
+}
+
+.run-btn.busy,
+.card-new.busy {
+  animation: aif-breathe 1.2s ease-in-out infinite;
+}
+
+/* Green check pops in. */
+@keyframes aif-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  70% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+.root.enter .ok-mark,
+.card.opening .ok-mark,
+.card.closing .ok-mark {
+  display: inline-block;
+  animation: aif-pop 0.4s var(--ease-spring) 0.2s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

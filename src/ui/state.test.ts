@@ -47,3 +47,15 @@ test('cards fold and unfold; saved preferences are validated', () => {
   assert.deepEqual(collapsedFrom(null), DEFAULT_COLLAPSED)
   assert.equal(reduce(INITIAL_STATE, { type: 'restoreCollapsed', collapsed: { context: false } }).collapsed.context, false)
 })
+
+test('motion intents: first load enters, toggles and notices animate once, motionDone clears', () => {
+  const loaded = reduce(INITIAL_STATE, { type: 'loaded', status: { kind: 'no-workspace' }, commands: [] })
+  assert.equal(loaded.motion.enter, true)
+  const settled = reduce(loaded, { type: 'motionDone' })
+  assert.equal(reduce(settled, { type: 'loaded', status: { kind: 'no-workspace' }, commands: [] }).motion.enter, false, 'later loads do not replay the entrance')
+  const opened = reduce(reduce(settled, { type: 'toggleCard', key: 'context' }), { type: 'motionDone' })
+  assert.equal(opened.collapsed.context, false)
+  const closing = reduce(opened, { type: 'toggleCard', key: 'context' })
+  assert.deepEqual([closing.motion.card, closing.motion.cardOpened], ['context', false])
+  assert.equal(reduce(settled, { type: 'failed', lead: 'x', message: 'y' }).motion.notice, true)
+})

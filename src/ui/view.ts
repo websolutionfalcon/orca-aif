@@ -38,9 +38,10 @@ function foldCard(
   ...children: (VNode | string | null | false)[]
 ): VNode {
   const open = !state.collapsed[key]
+  const turning = state.motion.card === key ? (state.motion.cardOpened ? ' opening' : ' closing') : ''
   return h(
     'section',
-    { class: `card${open ? '' : ' folded'}` },
+    { class: `card${open ? '' : ' folded'}${turning}` },
     h(
       'div',
       { class: 'card-head' },
@@ -51,14 +52,14 @@ function foldCard(
           attrs: { type: 'button', 'data-key': `${key}:toggle`, 'aria-expanded': open ? 'true' : 'false', title: head.tip },
           on: { click: () => handlers.toggleCard(key) }
         },
-        h('span', { class: 'chevron', attrs: { 'aria-hidden': 'true' } }, open ? '▾' : '▸'),
+        h('span', { class: `chevron${open ? ' open' : ''}`, attrs: { 'aria-hidden': 'true' } }, '▸'),
         h('h2', null, title),
         head.badge ? h('span', { class: 'badge', attrs: { 'data-key': `badge:${key}` } }, head.badge) : null,
         head.mark ?? null
       ),
       head.action ?? null
     ),
-    ...(open ? children : [])
+    open ? h('div', { class: 'card-body' }, ...children) : null
   )
 }
 
@@ -153,7 +154,7 @@ function notice(state: PanelState, handlers: ViewHandlers): VNode | null {
   if (!state.notice) return null
   return h(
     'div',
-    { class: `banner ${state.notice.kind}`, attrs: { role: state.notice.kind === 'error' ? 'alert' : 'status' }, on: { click: () => handlers.dismiss() } },
+    { class: `banner ${state.notice.kind}${state.motion.notice ? ' fresh' : ''}`, attrs: { role: state.notice.kind === 'error' ? 'alert' : 'status' }, on: { click: () => handlers.dismiss() } },
     `${state.notice.lead}: `,
     h('code', null, state.notice.detail)
   )
@@ -465,5 +466,5 @@ export function view(state: PanelState, t: PanelTexts, handlers: ViewHandlers): 
       skillsCard(status, state, t, handlers)
     )
   }
-  return h('div', { class: 'root' }, ...parts)
+  return h('div', { class: `root${state.motion.enter ? ' enter' : ''}` }, ...parts)
 }

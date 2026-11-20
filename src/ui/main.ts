@@ -34,9 +34,21 @@ function draw(): void {
   if (caret !== null && again instanceof HTMLInputElement) again.setSelectionRange(caret, caret)
 }
 
+const MOTION_MS = 700
+let motionTimer: ReturnType<typeof setTimeout> | null = null
+
 function dispatch(action: Action): void {
   state = reduce(state, action)
   draw()
+  // One-shot animations: clear the intent once it has played so later renders do not replay it.
+  const { enter, card, notice } = state.motion
+  if (action.type !== 'motionDone' && (enter || card || notice)) {
+    if (motionTimer) clearTimeout(motionTimer)
+    motionTimer = setTimeout(() => {
+      motionTimer = null
+      dispatch({ type: 'motionDone' })
+    }, MOTION_MS)
+  }
 }
 
 async function load(): Promise<void> {

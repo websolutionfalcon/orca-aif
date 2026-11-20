@@ -232,7 +232,8 @@ test('the plan mode is a badge next to the Plan heading, not beside the title', 
   const badge = findAll(tree, byKey('badge:plan'))[0]
   assert.equal(textOf(badge), 'full')
   const head = findAll(tree, byKey('plan:toggle'))[0]
-  assert.match(textOf(head), /^▾ Plan full$/)
+  assert.match(textOf(head), /^▸ Plan full$/)
+  assert.equal(findAll(head, byClass('open')).length, 1, 'an open card turns its chevron')
   const titleRow = findAll(tree, byClass('row')).find((row) => textOf(row).includes('Auth plan'))
   assert.equal(textOf(titleRow!), 'Auth plan')
 })
@@ -348,5 +349,27 @@ describe('foldable cards', () => {
     const tree = view(state({ kind: 'in-progress', ...ready }), en, handlers())
     const toggle = findAll(tree, byKey('plan:toggle'))[0]
     assert.equal(findAll(toggle, byKey('new:plan')).length, 0)
+  })
+})
+
+describe('motion', () => {
+  test('one-shot classes follow the motion flags', () => {
+    const quiet = view(state({ kind: 'in-progress', ...ready }), en, handlers())
+    assert.equal(quiet.attrs.class, 'root')
+    const entering = view(state({ kind: 'in-progress', ...ready }, { motion: { enter: true, card: null, cardOpened: false, notice: false } }), en, handlers())
+    assert.equal(entering.attrs.class, 'root enter')
+    const opening = view(
+      state({ kind: 'in-progress', ...ready }, { motion: { enter: false, card: 'roadmap', cardOpened: true, notice: false } }),
+      en,
+      handlers()
+    )
+    const roadmapCard = findAll(opening, byClass('card')).find((card) => findAll(card, byKey('roadmap:toggle')).length > 0)!
+    assert.match(roadmapCard.attrs.class, /opening/)
+    const fresh = view(
+      state({ kind: 'no-workspace' }, { notice: { kind: 'ok', lead: 'Sent', detail: '/aif-plan' }, motion: { enter: false, card: null, cardOpened: false, notice: true } }),
+      en,
+      handlers()
+    )
+    assert.equal(findAll(fresh, byClass('fresh')).length, 1)
   })
 })

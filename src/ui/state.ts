@@ -26,7 +26,24 @@ export interface PanelState {
   refreshing: boolean
   /** Folded cards; the Context card starts folded, the others open. */
   collapsed: Record<CardKey, boolean>
+  /**
+   * One-shot animation intents. The panel re-renders whole, so CSS animations would replay on
+   * every render; these flags mark what just changed and main.ts clears them after the animation.
+   */
+  motion: Motion
 }
+
+export interface Motion {
+  /** The first loaded render: cards rise in one after another. */
+  enter: boolean
+  /** The card that was just folded or unfolded. */
+  card: CardKey | null
+  cardOpened: boolean
+  /** A notice that just appeared. */
+  notice: boolean
+}
+
+export const NO_MOTION: Motion = { enter: false, card: null, cardOpened: false, notice: false }
 
 export type CardKey = 'plan' | 'roadmap' | 'context' | 'skills'
 
@@ -53,7 +70,8 @@ export const INITIAL_STATE: PanelState = {
   skillsQuery: '',
   skillsOpen: false,
   refreshing: false,
-  collapsed: { ...DEFAULT_COLLAPSED }
+  collapsed: { ...DEFAULT_COLLAPSED },
+  motion: NO_MOTION
 }
 
 export type Action =
@@ -68,26 +86,49 @@ export type Action =
   | { type: 'toggleSkills' }
   | { type: 'refreshing' }
   | { type: 'toggleCard'; key: CardKey }
+  | { type: 'motionDone' }
   | { type: 'restoreCollapsed'; collapsed: unknown }
 
 export function reduce(state: PanelState, action: Action): PanelState {
   switch (action.type) {
     case 'loaded':
-      return { ...state, loading: false, refreshing: false, status: action.status, commands: action.commands }
+      return {
+        ...state,
+        loading: false,
+        refreshing: false,
+        status: action.status,
+        commands: action.commands,
+        motion: state.loading ? { ...state.motion, enter: true } : state.motion
+      }
     case 'status':
       return { ...state, loading: false, refreshing: false, status: action.status }
     case 'refreshing':
       return { ...state, refreshing: true }
-    case 'toggleCard':
-      return { ...state, collapsed: { ...state.collapsed, [action.key]: !state.collapsed[action.key] } }
+    case 'toggleCard': {
+      const folded = !state.collapsed[action.key]
+      return {
+        ...state,
+        collapsed: { ...state.collapsed, [action.key]: folded },
+        motion: { ...state.motion, card: action.key, cardOpened: !folded }
+      }
+    }
+    case 'motionDone':
+      return { ...state, motion: NO_MOTION }
     case 'restoreCollapsed':
       return { ...state, collapsed: collapsedFrom(action.collapsed) }
     case 'pending':
       return { ...state, pending: action.command, notice: null }
     case 'commandDone':
-      return { ...state, pending: null, notice: { kind: 'ok', lead: action.lead, detail: action.text } }
+      return { ...state, pending: null, notice: { kind: 'ok', lead: action.lead, detail: action.text }, motion: { ...state.motion, notice: true } }
     case 'failed':
-      return { ...state, loading: false, refreshing: false, pending: null, notice: { kind: 'error', lead: action.lead, detail: action.message } }
+      return {
+        ...state,
+        loading: false,
+        refreshing: false,
+        pending: null,
+        notice: { kind: 'error', lead: action.lead, detail: action.message },
+        motion: { ...state.motion, notice: true }
+      }
     case 'dismiss':
       return { ...state, notice: null }
     case 'toggleDone':
