@@ -49,6 +49,7 @@ const ready: ReadyStatus = {
   warnings: ['plan too large']
 }
 const commands: PanelCommand[] = [
+  { id: 'explore', label: '/aif-explore', title: 'Explore', arg: 'optional', argHint: 'topic' },
   { id: 'roadmap', label: '/aif-roadmap', title: 'Roadmap', arg: 'optional', argHint: '' },
   { id: 'plan', label: '/aif-plan', title: 'Plan', arg: 'required', argHint: 'description' },
   { id: 'commit', label: '/aif-commit', title: 'Commit', arg: 'none', argHint: '' },
@@ -305,4 +306,15 @@ test('unfinished milestones get a Plan button that drafts /aif-plan for that mil
   assert.equal(textOf(button), 'Plan')
   button.on.click(new Event('click'))
   assert.deepEqual(h.drafted, ['plan:Auth — login and sessions'])
+})
+
+test('the header has an Explore icon left of Refresh that drafts /aif-explore', () => {
+  const h = handlers()
+  const tree = view(state({ kind: 'in-progress', ...ready }), en, h)
+  const actions = findAll(tree, byClass('header-actions'))[0]
+  assert.deepEqual(actions.children.map((child) => (child as { attrs: Record<string, string> }).attrs['data-key']), ['explore', 'refresh'])
+  findAll(tree, byKey('explore'))[0].on.click(new Event('click'))
+  assert.deepEqual(h.drafted, ['explore'])
+  assert.equal(findAll(view(state({ kind: 'not-installed', workspace }), en, h), byKey('explore')).length, 0)
+  assert.equal(findAll(view(state({ kind: 'in-progress', ...ready }, { pending: 'plan' }), en, h), byKey('explore'))[0].attrs.disabled, '')
 })

@@ -453,3 +453,14 @@ code {
   color: var(--orca-accent-foreground);
   border-color: transparent;
 }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.icon-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

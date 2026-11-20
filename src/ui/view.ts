@@ -100,13 +100,41 @@ function header(state: PanelState, t: PanelTexts, handlers: ViewHandlers): VNode
     { class: 'header' },
     h('div', null, h('h1', null, t.title), where ? h('div', { class: 'subtle' }, where) : null),
     h(
-      'button',
-      {
-        class: `icon-btn${state.refreshing ? ' spinning' : ''}`,
-        attrs: { type: 'button', 'data-key': 'refresh', title: t.refresh, 'aria-label': t.refresh, 'aria-busy': state.refreshing },
-        on: { click: () => handlers.refresh() }
-      },
-      refreshIcon()
+      'div',
+      { class: 'header-actions' },
+      exploreButton(state, t, handlers),
+      h(
+        'button',
+        {
+          class: `icon-btn${state.refreshing ? ' spinning' : ''}`,
+          attrs: { type: 'button', 'data-key': 'refresh', title: t.refresh, 'aria-label': t.refresh, 'aria-busy': state.refreshing },
+          on: { click: () => handlers.refresh() }
+        },
+        refreshIcon()
+      )
+    )
+  )
+}
+
+/** Compass: drafts `/aif-explore ` in the workspace agent without Enter. Hidden without AI Factory. */
+function exploreButton(state: PanelState, t: PanelTexts, handlers: ViewHandlers): VNode | null {
+  const kind = state.status?.kind
+  if (!kind || kind === 'no-workspace' || kind === 'not-installed') return null
+  const explore = state.commands.find((command) => command.id === 'explore')
+  if (!explore) return null
+  const label = `${t.explore}: ${explore.label} …`
+  return h(
+    'button',
+    {
+      class: 'icon-btn',
+      attrs: { type: 'button', 'data-key': 'explore', title: label, 'aria-label': label, disabled: state.pending !== null },
+      on: { click: () => handlers.draft(explore) }
+    },
+    h(
+      'svg',
+      { attrs: { viewBox: '0 0 24 24', width: 15, height: 15, fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' } },
+      h('circle', { attrs: { cx: 12, cy: 12, r: 9 } }),
+      h('path', { attrs: { d: 'M15.5 8.5l-2 5-5 2 2-5z' } })
     )
   )
 }
