@@ -50,6 +50,34 @@ body {
   padding: 10px;
 }
 
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.card-head h2 {
+  margin: 0;
+}
+
+.card-action {
+  flex: none;
+  border: 1px solid var(--orca-border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--orca-muted-foreground);
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.card-action:hover {
+  background: var(--orca-accent);
+  color: var(--orca-accent-foreground);
+  border-color: transparent;
+}
+
 .card h2 {
   margin: 0 0 8px;
   font-size: 11px;

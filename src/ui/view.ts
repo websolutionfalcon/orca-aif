@@ -21,6 +21,33 @@ function card(title: string, ...children: (VNode | string | null | false)[]): VN
   return h('section', { class: 'card' }, h('h2', null, title), ...children)
 }
 
+/** A card whose header carries an "Open" button for the markdown file it shows. */
+function fileCard(
+  title: string,
+  open: { key: string; path: string; t: PanelTexts; handlers: ViewHandlers },
+  ...children: (VNode | string | null | false)[]
+): VNode {
+  return h(
+    'section',
+    { class: 'card' },
+    h(
+      'div',
+      { class: 'card-head' },
+      h('h2', null, title),
+      h(
+        'button',
+        {
+          class: 'card-action',
+          attrs: { type: 'button', 'data-key': `open:${open.key}`, title: `${open.t.openInEditor}: ${open.path}`, 'aria-label': `${open.t.openInEditor}: ${open.path}` },
+          on: { click: () => open.handlers.open(open.path) }
+        },
+        `${open.t.open} ↗`
+      )
+    ),
+    ...children
+  )
+}
+
 function fileLink(path: string, label: string, handlers: ViewHandlers): VNode {
   return h('button', { class: 'link', attrs: { type: 'button', title: path }, on: { click: () => handlers.open(path) } }, label)
 }
@@ -129,8 +156,9 @@ function planCard(status: Ready, state: PanelState, t: PanelTexts, handlers: Vie
   }
   const plan = status.plan
   if (!plan) return card(t.plan, h('p', { class: 'subtle' }, t.noPlan))
-  return card(
+  return fileCard(
     t.plan,
+    { key: 'plan', path: plan.path, t, handlers },
     h('div', { class: 'row' }, fileLink(plan.path, plainText(plan.title ?? plan.path), handlers), h('span', { class: 'subtle' }, t.kinds[plan.kind])),
     progress(plan.done, plan.total),
     h('div', { class: 'subtle' }, status.kind === 'done' ? t.allDone : `${plan.done}/${plan.total} ${t.tasks}`),
@@ -141,8 +169,9 @@ function planCard(status: Ready, state: PanelState, t: PanelTexts, handlers: Vie
 function roadmapCard(status: Ready, t: PanelTexts, handlers: ViewHandlers): VNode | null {
   const roadmap = status.roadmap
   if (!roadmap || roadmap.total === 0) return null
-  return card(
+  return fileCard(
     t.roadmap,
+    { key: 'roadmap', path: roadmap.path, t, handlers },
     h('div', { class: 'row' }, fileLink(roadmap.path, `${roadmap.done}/${roadmap.total} ${t.milestones}`, handlers)),
     progress(roadmap.done, roadmap.total),
     h(
