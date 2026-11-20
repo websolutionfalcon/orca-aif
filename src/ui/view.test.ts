@@ -163,20 +163,13 @@ test('workspace name equal to the branch is shown once', () => {
   assert.ok(!textOf(tree).includes('feature/auth · feature/auth'))
 })
 
-test('plan and roadmap cards have an Open button for their markdown file', () => {
+test('plan and roadmap open their files from the title links, with no separate Open buttons', () => {
   const h = handlers()
-  const tree = view(state({ kind: 'in-progress', ...ready }), panelTexts('ru'), h)
-  const plan = findAll(tree, byKey('open:plan'))[0]
-  const roadmap = findAll(tree, byKey('open:roadmap'))[0]
-  assert.match(textOf(plan), /Открыть/)
-  plan.on.click(new Event('click'))
-  roadmap.on.click(new Event('click'))
+  const tree = view(state({ kind: 'in-progress', ...ready }), en, h)
+  assert.equal(findAll(tree, (node) => (node.attrs['data-key'] ?? '').startsWith('open:')).length, 0)
+  findAll(tree, (node) => node.attrs.title === '.ai-factory/plans/feature-auth.md')[0].on.click(new Event('click'))
+  findAll(tree, (node) => node.attrs.title === '.ai-factory/ROADMAP.md')[0].on.click(new Event('click'))
   assert.deepEqual(h.opened, ['.ai-factory/plans/feature-auth.md', '.ai-factory/ROADMAP.md'])
-})
-
-test('no Open button without a plan file', () => {
-  const tree = view(state({ kind: 'no-plan', ...ready, plan: null }), en, handlers())
-  assert.equal(findAll(tree, byKey('open:plan')).length, 0)
 })
 
 describe('skills library', () => {

@@ -24,33 +24,15 @@ function card(title: string, ...children: (VNode | string | null | false)[]): VN
   return h('section', { class: 'card' }, h('h2', null, title), ...children)
 }
 
-/** A card whose header carries an "Open" button for the markdown file it shows. */
-function fileCard(
-  title: string,
-  open: { key: string; path: string; t: PanelTexts; handlers: ViewHandlers; badge?: string },
-  ...children: (VNode | string | null | false)[]
-): VNode {
+/** A card whose heading carries a small badge (the plan mode). */
+function badgedCard(title: string, badge: { key: string; text: string }, ...children: (VNode | string | null | false)[]): VNode {
   return h(
     'section',
     { class: 'card' },
     h(
       'div',
       { class: 'card-head' },
-      h(
-        'div',
-        { class: 'card-title' },
-        h('h2', null, title),
-        open.badge ? h('span', { class: 'badge', attrs: { 'data-key': `badge:${open.key}` } }, open.badge) : null
-      ),
-      h(
-        'button',
-        {
-          class: 'card-action',
-          attrs: { type: 'button', 'data-key': `open:${open.key}`, title: `${open.t.openInEditor}: ${open.path}`, 'aria-label': `${open.t.openInEditor}: ${open.path}` },
-          on: { click: () => open.handlers.open(open.path) }
-        },
-        `${open.t.open} ↗`
-      )
+      h('div', { class: 'card-title' }, h('h2', null, title), h('span', { class: 'badge', attrs: { 'data-key': `badge:${badge.key}` } }, badge.text))
     ),
     ...children
   )
@@ -182,9 +164,9 @@ function planCard(status: Ready, state: PanelState, t: PanelTexts, handlers: Vie
   }
   const plan = status.plan
   if (!plan) return card(t.plan, h('p', { class: 'subtle' }, t.noPlan))
-  return fileCard(
+  return badgedCard(
     t.plan,
-    { key: 'plan', path: plan.path, t, handlers, badge: t.kinds[plan.kind] },
+    { key: 'plan', text: t.kinds[plan.kind] },
     h('div', { class: 'row' }, fileLink(plan.path, plainText(plan.title ?? plan.path), handlers)),
     progress(plan.done, plan.total),
     h('div', { class: 'subtle' }, status.kind === 'done' ? t.allDone : `${plan.done}/${plan.total} ${t.tasks}`),
@@ -195,9 +177,8 @@ function planCard(status: Ready, state: PanelState, t: PanelTexts, handlers: Vie
 function roadmapCard(status: Ready, t: PanelTexts, handlers: ViewHandlers): VNode | null {
   const roadmap = status.roadmap
   if (!roadmap || roadmap.total === 0) return null
-  return fileCard(
+  return card(
     t.roadmap,
-    { key: 'roadmap', path: roadmap.path, t, handlers },
     h('div', { class: 'row' }, fileLink(roadmap.path, `${roadmap.done}/${roadmap.total} ${t.milestones}`, handlers)),
     progress(roadmap.done, roadmap.total),
     h(
